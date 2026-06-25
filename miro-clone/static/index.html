@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Miro Clone MVP</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <!-- Using a stable older version of Fabric.js for MVP simplicity -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuidv4.min.js"></script>
+</head>
+<body>
+
+    <!-- Login Modal -->
+    <div id="login-modal" class="modal">
+        <div class="modal-content">
+            <h2>Welcome to Miro Clone MVP</h2>
+            <p>Enter a nickname to join the board</p>
+            <input type="text" id="nickname-input" placeholder="Your Nickname" />
+            <button id="join-btn">Join Board</button>
+        </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div id="toolbar" style="display: none;">
+        <button id="btn-rect">Add Rectangle</button>
+        <button id="btn-circle">Add Circle</button>
+        <button id="btn-text">Add Text</button>
+        <button id="btn-clear">Clear Selection</button>
+    </div>
+
+    <!-- Canvas Container -->
+    <div id="canvas-container" style="display: none;">
+        <canvas id="canvas"></canvas>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
