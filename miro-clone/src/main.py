@@ -2,7 +2,9 @@ import json
 import logging
 from typing import Dict, Set
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends, UploadFile, File
+import aiofiles
+import os
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,6 +19,9 @@ logger = logging.getLogger(__name__)
 app = FastAPI()
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+
+os.makedirs("uploads", exist_ok=True)
 
 class ConnectionManager:
     def __init__(self):
@@ -58,7 +63,7 @@ async def websocket_endpoint(websocket: WebSocket, nickname: str, db: AsyncSessi
     await manager.connect(websocket, nickname)
 
     # Send all existing shapes to the newly connected user
-    result = await db.execute(select(Shape))
+    result = await db.execute(select(Shape).order_by(Shape.z_index.asc()))
     shapes = result.scalars().all()
 
     initial_shapes = []
@@ -68,6 +73,7 @@ async def websocket_endpoint(websocket: WebSocket, nickname: str, db: AsyncSessi
             "type": s.type,
             "left": s.left,
             "top": s.top,
+            "z_index": s.z_index,
         }
         if s.width is not None: shape_data["width"] = s.width
         if s.height is not None: shape_data["height"] = s.height
@@ -111,7 +117,8 @@ async def websocket_endpoint(websocket: WebSocket, nickname: str, db: AsyncSessi
                     radius=obj_data.get("radius"),
                     text=obj_data.get("text"),
                     fontSize=obj_data.get("fontSize"),
-                    properties={k: v for k, v in obj_data.items() if k not in ["id", "type", "left", "top", "width", "height", "fill", "radius", "text", "fontSize"]}
+                    z_index=obj_data.get("z_index", 0),
+                    properties={k: v for k, v in obj_data.items() if k not in ["id", "type", "left", "top", "width", "height", "fill", "radius", "text", "fontSize", "z_index"]}
                 )
                 db.add(new_shape)
                 await db.commit()
@@ -128,11 +135,12 @@ async def websocket_endpoint(websocket: WebSocket, nickname: str, db: AsyncSessi
                     if "radius" in obj_data: db_shape.radius = obj_data["radius"]
                     if "text" in obj_data: db_shape.text = obj_data["text"]
                     if "fontSize" in obj_data: db_shape.fontSize = obj_data["fontSize"]
+                    if "z_index" in obj_data: db_shape.z_index = obj_data["z_index"]
 
                     # Update properties
                     current_props = dict(db_shape.properties or {})
                     for k, v in obj_data.items():
-                         if k not in ["id", "type", "left", "top", "width", "height", "fill", "radius", "text", "fontSize"]:
+                         if k not in ["id", "type", "left", "top", "width", "height", "fill", "radius", "text", "fontSize", "z_index"]:
                              current_props[k] = v
                     db_shape.properties = current_props
 
@@ -155,3 +163,25 @@ async def websocket_endpoint(websocket: WebSocket, nickname: str, db: AsyncSessi
 
     except WebSocketDisconnect:
         manager.disconnect(nickname)
+
+from fastapi import HTTPException
+@app.post("/upload")
+async def upload_image(file: UploadFile = File(...)):
+    import uuid
+
+    allowed_types = ["image/jpeg", "image/png", "image/gif", "image/webp"]
+    if file.content_type not in allowed_types:
+        raise HTTPException(status_code=400, detail="Invalid file type. Only images are allowed.")
+
+    ext = file.filename.split('.')[-1].lower() if '.' in file.filename else 'png'
+    if ext not in ['jpg', 'jpeg', 'png', 'gif', 'webp']:
+        raise HTTPException(status_code=400, detail="Invalid file extension.")
+
+    filename = f"{uuid.uuid4()}.{ext}"
+    filepath = os.path.join("uploads", filename)
+
+    async with aiofiles.open(filepath, 'wb') as out_file:
+        content = await file.read()
+        await out_file.write(content)
+
+    return {"url": f"/uploads/{filename}"}
