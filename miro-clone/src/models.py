@@ -6,6 +6,7 @@ class Shape(Base):
 
     id = Column(String, primary_key=True, index=True) # UUID string from frontend
     type = Column(String, nullable=False) # 'rect', 'circle', 'text', 'i-text', 'image'
+    z_index = Column(Integer, default=0, nullable=False)
 
     # Common properties
     left = Column(Float, nullable=False)

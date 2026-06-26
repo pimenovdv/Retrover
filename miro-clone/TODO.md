@@ -1,11 +1,11 @@
 # TODO for Miro Clone
 
 ## 1. Canvas Functionality
-- [ ] Implement true infinite canvas (zoom in/out, panning support).
-- [ ] Add support for image uploads and dragging images onto canvas.
-- [ ] Support shape grouping and multi-selection movement.
-- [ ] Add more shape types (arrows, polygons, lines, freehand drawing).
-- [ ] Add support for z-index (bring to front, send to back).
+- [x] Implement true infinite canvas (zoom in/out, panning support).
+- [x] Add support for image uploads and dragging images onto canvas.
+- [x] Support shape grouping and multi-selection movement.
+- [x] Add more shape types (arrows, polygons, lines, freehand drawing).
+- [x] Add support for z-index (bring to front, send to back).
 
 ## 2. Collaborative Features
 - [ ] Display other users' cursors in real-time.

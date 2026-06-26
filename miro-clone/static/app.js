@@ -35,6 +35,52 @@ document.addEventListener("DOMContentLoaded", () => {
             canvas.renderAll();
         });
 
+        // Infinite Canvas: Zoom
+        canvas.on('mouse:wheel', function(opt) {
+            var delta = opt.e.deltaY;
+            var zoom = canvas.getZoom();
+            zoom *= 0.999 ** delta;
+            if (zoom > 20) zoom = 20;
+            if (zoom < 0.01) zoom = 0.01;
+            canvas.zoomToPoint({ x: opt.e.offsetX, y: opt.e.offsetY }, zoom);
+            opt.e.preventDefault();
+            opt.e.stopPropagation();
+        });
+
+        // Infinite Canvas: Pan
+        let isDragging = false;
+        let lastPosX = 0;
+        let lastPosY = 0;
+
+        canvas.on('mouse:down', function(opt) {
+            var evt = opt.e;
+            if (evt.altKey === true || evt.button === 1) {
+                isDragging = true;
+                canvas.selection = false;
+                lastPosX = evt.clientX;
+                lastPosY = evt.clientY;
+            }
+        });
+
+        canvas.on('mouse:move', function(opt) {
+            if (isDragging) {
+                var e = opt.e;
+                var vpt = canvas.viewportTransform;
+                vpt[4] += e.clientX - lastPosX;
+                vpt[5] += e.clientY - lastPosY;
+                canvas.requestRenderAll();
+                lastPosX = e.clientX;
+                lastPosY = e.clientY;
+            }
+        });
+
+        canvas.on('mouse:up', function(opt) {
+            canvas.setViewportTransform(canvas.viewportTransform);
+            isDragging = false;
+            canvas.selection = true;
+        });
+
+
         // Connect WebSocket
         const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
         ws = new WebSocket(`${protocol}//${window.location.host}/ws/${nickname}`);
@@ -99,6 +145,155 @@ document.addEventListener("DOMContentLoaded", () => {
             canvas.setActiveObject(text);
         });
 
+
+        document.getElementById("btn-line").addEventListener("click", () => {
+            const id = uuidv4();
+            const vpt = canvas.viewportTransform;
+            const x = (canvas.width / 2 - vpt[4]) / vpt[0];
+            const y = (canvas.height / 2 - vpt[5]) / vpt[3];
+
+            const line = new fabric.Line([x, y, x + 100, y + 100], {
+                stroke: 'black',
+                strokeWidth: 5,
+                id: id
+            });
+            canvas.add(line);
+            canvas.setActiveObject(line);
+        });
+
+        document.getElementById("btn-arrow").addEventListener("click", () => {
+             // simplified arrow as a triangle on a line
+             const id = uuidv4();
+             const vpt = canvas.viewportTransform;
+             const x = (canvas.width / 2 - vpt[4]) / vpt[0];
+             const y = (canvas.height / 2 - vpt[5]) / vpt[3];
+
+             const line = new fabric.Line([0, 0, 100, 0], {
+                stroke: 'black',
+                strokeWidth: 5
+             });
+             const triangle = new fabric.Triangle({
+                width: 20,
+                height: 20,
+                fill: 'black',
+                left: 100,
+                top: -10,
+                angle: 90
+             });
+             const group = new fabric.Group([line, triangle], {
+                 left: x,
+                 top: y,
+                 id: id
+             });
+             canvas.add(group);
+             canvas.setActiveObject(group);
+        });
+
+        document.getElementById("btn-polygon").addEventListener("click", () => {
+             const id = uuidv4();
+             const vpt = canvas.viewportTransform;
+             const x = (canvas.width / 2 - vpt[4]) / vpt[0];
+             const y = (canvas.height / 2 - vpt[5]) / vpt[3];
+
+             const poly = new fabric.Polygon([
+                {x: 0, y: 0},
+                {x: 50, y: -50},
+                {x: 100, y: 0},
+                {x: 100, y: 50},
+                {x: 0, y: 50}
+             ], {
+                left: x,
+                top: y,
+                fill: 'purple',
+                id: id
+             });
+             canvas.add(poly);
+             canvas.setActiveObject(poly);
+        });
+
+        const btnFreehand = document.getElementById("btn-freehand");
+        btnFreehand.addEventListener("click", () => {
+             canvas.isDrawingMode = !canvas.isDrawingMode;
+             btnFreehand.style.backgroundColor = canvas.isDrawingMode ? '#ccc' : '#f0f0f0';
+        });
+
+        // Add ID to freehand paths
+        canvas.on('path:created', (e) => {
+             const path = e.path;
+             path.set({ id: uuidv4() });
+             // object:added will fire shortly after this and handle the actual broadcast.
+        });
+
+
+        document.getElementById("btn-group").addEventListener("click", () => {
+             if (!canvas.getActiveObject()) return;
+             if (canvas.getActiveObject().type !== 'activeSelection') return;
+
+             const group = canvas.getActiveObject().toGroup();
+             group.set({ id: uuidv4() });
+
+             // In a real robust system, we would handle nested items better,
+             // but for MVP we will remove the individual items from DB and add the group
+             group.getObjects().forEach(obj => {
+                 ws.send(JSON.stringify({ action: 'remove', object: { id: obj.id } }));
+             });
+             ws.send(JSON.stringify({ action: 'add', object: group.toObject(['id', 'z_index']) }));
+
+             canvas.requestRenderAll();
+        });
+
+        document.getElementById("btn-ungroup").addEventListener("click", () => {
+             if (!canvas.getActiveObject()) return;
+             if (canvas.getActiveObject().type !== 'group') return;
+
+             const group = canvas.getActiveObject();
+             const groupId = group.id;
+
+             // Convert group to activeSelection BEFORE sending updates
+             // so they have absolute coordinates in their .left / .top
+             const activeSelection = group.toActiveSelection();
+
+             ws.send(JSON.stringify({ action: 'remove', object: { id: groupId } }));
+
+             activeSelection.getObjects().forEach(obj => {
+                 if (!obj.id) obj.id = uuidv4();
+                 // Now obj.left / obj.top are absolute coordinates
+                 ws.send(JSON.stringify({ action: 'add', object: obj.toObject(['id', 'z_index']) }));
+             });
+
+             canvas.requestRenderAll();
+        });
+
+
+        document.getElementById("btn-front").addEventListener("click", () => {
+             const activeObject = canvas.getActiveObject();
+             if (activeObject) {
+                 canvas.bringToFront(activeObject);
+                 updateZIndices();
+             }
+        });
+
+        document.getElementById("btn-back").addEventListener("click", () => {
+             const activeObject = canvas.getActiveObject();
+             if (activeObject) {
+                 canvas.sendToBack(activeObject);
+                 updateZIndices();
+             }
+        });
+
+        function updateZIndices() {
+             const objects = canvas.getObjects();
+             objects.forEach((obj, index) => {
+                 if (obj.z_index !== index) {
+                     obj.z_index = index;
+                     ws.send(JSON.stringify({
+                         action: 'modify',
+                         object: { id: obj.id, z_index: index }
+                     }));
+                 }
+             });
+        }
+
         document.getElementById("btn-clear").addEventListener("click", () => {
             canvas.discardActiveObject();
             canvas.requestRenderAll();
@@ -112,20 +307,115 @@ document.addEventListener("DOMContentLoaded", () => {
 
             ws.send(JSON.stringify({
                 action: 'add',
-                object: obj.toObject(['id'])
+                object: obj.toObject(['id', 'z_index'])
             }));
         });
 
         canvas.on('object:modified', (e) => {
             if (isProcessingSync) return;
             const obj = e.target;
-            ws.send(JSON.stringify({
-                action: 'modify',
-                object: obj.toObject(['id'])
-            }));
+
+            if (obj.type === 'activeSelection') {
+                const activeSelection = canvas.getActiveObject();
+                const objs = activeSelection.getObjects();
+
+                // Convert coordinates while keeping selection active
+                objs.forEach(function(o) {
+                    // Compute absolute coordinates using the active selection's transformation matrix
+                    const matrix = o.calcTransformMatrix();
+                    const point = fabric.util.qrDecompose(matrix);
+
+                    ws.send(JSON.stringify({
+                        action: 'modify',
+                        object: {
+                            id: o.id,
+                            left: point.translateX,
+                            top: point.translateY,
+                            scaleX: point.scaleX,
+                            scaleY: point.scaleY,
+                            angle: point.angle
+                        }
+                    }));
+                });
+            } else {
+                ws.send(JSON.stringify({
+                    action: 'modify',
+                    object: obj.toObject(['id', 'z_index'])
+                }));
+            }
         });
 
         // Handle deletion via keyboard
+
+        // Handle drag and drop images
+        const canvasContainerEl = document.getElementById("canvas-container");
+        canvasContainerEl.addEventListener('dragover', (e) => {
+            e.preventDefault();
+        });
+
+        canvasContainerEl.addEventListener('drop', (e) => {
+            e.preventDefault();
+            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                const file = e.dataTransfer.files[0];
+                uploadAndAddImage(file, e.clientX, e.clientY);
+            }
+        });
+
+        // Handle paste images
+        window.addEventListener('paste', (e) => {
+            const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+            for (let index in items) {
+                const item = items[index];
+                if (item.kind === 'file') {
+                    const blob = item.getAsFile();
+                    // Paste in center of viewport
+                    const vpt = canvas.viewportTransform;
+                    const centerX = (canvas.width / 2 - vpt[4]) / vpt[0];
+                    const centerY = (canvas.height / 2 - vpt[5]) / vpt[3];
+                    uploadAndAddImage(blob, centerX, centerY, true);
+                }
+            }
+        });
+
+        async function uploadAndAddImage(file, x, y, isCanvasCoords=false) {
+            if (!file.type.startsWith('image/')) return;
+
+            const formData = new FormData();
+            formData.append("file", file);
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+
+                let canvasX = x;
+                let canvasY = y;
+
+                if (!isCanvasCoords) {
+                    const pointer = canvas.getPointer({clientX: x, clientY: y});
+                    canvasX = pointer.x;
+                    canvasY = pointer.y;
+                }
+
+                fabric.Image.fromURL(data.url, (img) => {
+                    const id = uuidv4();
+                    img.set({
+                        left: canvasX,
+                        top: canvasY,
+                        id: id,
+                        type: 'image'
+                    });
+                    canvas.add(img);
+                    canvas.setActiveObject(img);
+                });
+
+            } catch (err) {
+                console.error("Upload failed", err);
+            }
+        }
+
         window.addEventListener('keydown', (e) => {
              if (e.key === 'Delete' || e.key === 'Backspace') {
                  // Check if we are editing text, if so don't delete the whole object
@@ -155,6 +445,7 @@ document.addEventListener("DOMContentLoaded", () => {
             canvas.renderOnAddRemove = false;
 
             objects.forEach((obj) => {
+                if (shapeData.z_index !== undefined) obj.z_index = shapeData.z_index;
                 canvas.add(obj);
             });
 
@@ -173,6 +464,9 @@ document.addEventListener("DOMContentLoaded", () => {
             if (obj) {
                 obj.set(objData);
                 obj.setCoords();
+                if (objData.z_index !== undefined) {
+                     canvas.moveTo(obj, objData.z_index);
+                }
                 canvas.renderAll();
             } else {
                 // Object not found, add it
