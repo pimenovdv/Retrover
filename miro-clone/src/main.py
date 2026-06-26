@@ -152,6 +152,9 @@ async def websocket_endpoint(websocket: WebSocket, nickname: str, db: AsyncSessi
                 if db_shape:
                     await db.delete(db_shape)
                     await db.commit()
+            elif action in ["cursor", "select", "deselect", "chat"]:
+                # Transient actions, no DB update
+                pass
 
             # Broadcast the change to everyone else
             await manager.broadcast({
@@ -163,6 +166,11 @@ async def websocket_endpoint(websocket: WebSocket, nickname: str, db: AsyncSessi
 
     except WebSocketDisconnect:
         manager.disconnect(nickname)
+        await manager.broadcast({
+            "type": "update",
+            "action": "disconnect",
+            "sender": nickname
+        })
 
 from fastapi import HTTPException
 @app.post("/upload")
