@@ -13,6 +13,10 @@ from sqlalchemy import select
 from .database import engine, Base, get_db
 from .models import Shape
 
+import asyncio
+from .database import AsyncSessionLocal
+from collections import OrderedDict
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -49,10 +53,130 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
+
+class DatabaseBatcher:
+    def __init__(self):
+        self.queue = OrderedDict() # id -> (action, obj_data)
+        self.lock = asyncio.Lock()
+
+    async def push(self, action: str, obj_data: dict):
+        obj_id = obj_data.get("id")
+        if not obj_id:
+            return
+
+        async with self.lock:
+            if action == "remove":
+                self.queue[obj_id] = (action, obj_data)
+            else:
+                # If modifying an already queued "add", keep it as "add" and merge data
+                # If modifying a "modify", merge data
+                if obj_id in self.queue:
+                    prev_action, prev_data = self.queue[obj_id]
+                    if prev_action == "add" and action == "modify":
+                        # Merge into the 'add'
+                        merged_data = prev_data.copy()
+                        merged_data.update(obj_data)
+                        self.queue[obj_id] = ("add", merged_data)
+                    elif prev_action == "modify" and action == "modify":
+                        merged_data = prev_data.copy()
+                        merged_data.update(obj_data)
+                        self.queue[obj_id] = ("modify", merged_data)
+                    elif prev_action == "remove" and action in ["add", "modify"]:
+                        # Edge case: object removed then re-added/modified before sync. Unlikely but possible.
+                        self.queue[obj_id] = (action, obj_data)
+                    else:
+                        self.queue[obj_id] = (action, obj_data)
+                else:
+                    self.queue[obj_id] = (action, obj_data)
+
+    async def process_batch(self):
+        async with self.lock:
+            if not self.queue:
+                return
+            batch = self.queue
+            self.queue = OrderedDict()
+
+        async with AsyncSessionLocal() as session:
+            try:
+                for obj_id, (action, obj_data) in batch.items():
+                    if action == "add":
+                        new_shape = Shape(
+                            id=obj_id,
+                            type=obj_data.get("type"),
+                            left=obj_data.get("left", 0),
+                            top=obj_data.get("top", 0),
+                            width=obj_data.get("width"),
+                            height=obj_data.get("height"),
+                            fill=obj_data.get("fill"),
+                            radius=obj_data.get("radius"),
+                            text=obj_data.get("text"),
+                            fontSize=obj_data.get("fontSize"),
+                            z_index=obj_data.get("z_index", 0),
+                            properties={k: v for k, v in obj_data.items() if k not in ["id", "type", "left", "top", "width", "height", "fill", "radius", "text", "fontSize", "z_index"]}
+                        )
+                        session.add(new_shape)
+                    elif action == "modify":
+                        result = await session.execute(select(Shape).filter(Shape.id == obj_id))
+                        db_shape = result.scalars().first()
+                        if db_shape:
+                            if "left" in obj_data: db_shape.left = obj_data["left"]
+                            if "top" in obj_data: db_shape.top = obj_data["top"]
+                            if "width" in obj_data: db_shape.width = obj_data["width"]
+                            if "height" in obj_data: db_shape.height = obj_data["height"]
+                            if "fill" in obj_data: db_shape.fill = obj_data["fill"]
+                            if "radius" in obj_data: db_shape.radius = obj_data["radius"]
+                            if "text" in obj_data: db_shape.text = obj_data["text"]
+                            if "fontSize" in obj_data: db_shape.fontSize = obj_data["fontSize"]
+                            if "z_index" in obj_data: db_shape.z_index = obj_data["z_index"]
+
+                            current_props = dict(db_shape.properties or {})
+                            for k, v in obj_data.items():
+                                if k not in ["id", "type", "left", "top", "width", "height", "fill", "radius", "text", "fontSize", "z_index"]:
+                                    current_props[k] = v
+                            db_shape.properties = current_props
+                    elif action == "remove":
+                        result = await session.execute(select(Shape).filter(Shape.id == obj_id))
+                        db_shape = result.scalars().first()
+                        if db_shape:
+                            await session.delete(db_shape)
+                await session.commit()
+            except Exception as e:
+                logger.error(f"Error processing database batch: {e}")
+                await session.rollback()
+
+db_batcher = DatabaseBatcher()
+
+
+
+db_worker_task = None
+
+async def db_writer_worker():
+    while True:
+        await asyncio.sleep(1) # Process batch every 1 second
+        try:
+            await db_batcher.process_batch()
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            logger.error(f"Error in db_writer_worker: {e}")
+
 @app.on_event("startup")
 async def startup_event():
+    global db_worker_task
+    db_worker_task = asyncio.create_task(db_writer_worker())
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    if db_worker_task:
+        db_worker_task.cancel()
+        try:
+            await db_worker_task
+        except asyncio.CancelledError:
+            pass
+    # Flush remaining batch
+    await db_batcher.process_batch()
 
 @app.get("/")
 async def get():
@@ -61,6 +185,9 @@ async def get():
 @app.websocket("/ws/{nickname}")
 async def websocket_endpoint(websocket: WebSocket, nickname: str, db: AsyncSession = Depends(get_db)):
     await manager.connect(websocket, nickname)
+
+    # Ensure all pending db writes are flushed before querying existing shapes
+    await db_batcher.process_batch()
 
     # Send all existing shapes to the newly connected user
     result = await db.execute(select(Shape).order_by(Shape.z_index.asc()))
@@ -104,54 +231,8 @@ async def websocket_endpoint(websocket: WebSocket, nickname: str, db: AsyncSessi
             obj_data = message.get("object", {})
             obj_id = obj_data.get("id")
 
-            if action == "add":
-                # Save to DB
-                new_shape = Shape(
-                    id=obj_id,
-                    type=obj_data.get("type"),
-                    left=obj_data.get("left", 0),
-                    top=obj_data.get("top", 0),
-                    width=obj_data.get("width"),
-                    height=obj_data.get("height"),
-                    fill=obj_data.get("fill"),
-                    radius=obj_data.get("radius"),
-                    text=obj_data.get("text"),
-                    fontSize=obj_data.get("fontSize"),
-                    z_index=obj_data.get("z_index", 0),
-                    properties={k: v for k, v in obj_data.items() if k not in ["id", "type", "left", "top", "width", "height", "fill", "radius", "text", "fontSize", "z_index"]}
-                )
-                db.add(new_shape)
-                await db.commit()
-
-            elif action == "modify":
-                result = await db.execute(select(Shape).filter(Shape.id == obj_id))
-                db_shape = result.scalars().first()
-                if db_shape:
-                    if "left" in obj_data: db_shape.left = obj_data["left"]
-                    if "top" in obj_data: db_shape.top = obj_data["top"]
-                    if "width" in obj_data: db_shape.width = obj_data["width"]
-                    if "height" in obj_data: db_shape.height = obj_data["height"]
-                    if "fill" in obj_data: db_shape.fill = obj_data["fill"]
-                    if "radius" in obj_data: db_shape.radius = obj_data["radius"]
-                    if "text" in obj_data: db_shape.text = obj_data["text"]
-                    if "fontSize" in obj_data: db_shape.fontSize = obj_data["fontSize"]
-                    if "z_index" in obj_data: db_shape.z_index = obj_data["z_index"]
-
-                    # Update properties
-                    current_props = dict(db_shape.properties or {})
-                    for k, v in obj_data.items():
-                         if k not in ["id", "type", "left", "top", "width", "height", "fill", "radius", "text", "fontSize", "z_index"]:
-                             current_props[k] = v
-                    db_shape.properties = current_props
-
-                    await db.commit()
-
-            elif action == "remove":
-                result = await db.execute(select(Shape).filter(Shape.id == obj_id))
-                db_shape = result.scalars().first()
-                if db_shape:
-                    await db.delete(db_shape)
-                    await db.commit()
+            if action in ["add", "modify", "remove"]:
+                await db_batcher.push(action, obj_data)
             elif action in ["cursor", "select", "deselect", "chat"]:
                 # Transient actions, no DB update
                 pass
