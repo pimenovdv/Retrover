@@ -8,9 +8,9 @@
 - [x] Add support for z-index (bring to front, send to back).
 
 ## 2. Collaborative Features
-- [ ] Display other users' cursors in real-time.
-- [ ] Show who is currently selecting/editing an object to avoid conflicts.
-- [ ] Add a chat or comment system.
+- [x] Display other users' cursors in real-time.
+- [x] Show who is currently selecting/editing an object to avoid conflicts.
+- [x] Add a chat or comment system.
 
 ## 3. Backend & Database
 - [ ] Optimize database writes (batch updates instead of per-event writes).
