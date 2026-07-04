@@ -13,7 +13,7 @@
 - [x] Add a chat or comment system.
 
 ## 3. Backend & Database
-- [ ] Optimize database writes (batch updates instead of per-event writes).
+- [x] Optimize database writes (batch updates instead of per-event writes).
 - [ ] Add Redis for faster WebSocket broadcast and state management.
 - [ ] Implement Board models (allow creating multiple different boards, currently there is only one global board).
 

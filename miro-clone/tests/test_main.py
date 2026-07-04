@@ -23,7 +23,12 @@ def setup_db_sync():
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.drop_all)
 
-    loop = asyncio.get_event_loop()
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
     loop.run_until_complete(_setup())
     yield
     loop.run_until_complete(_teardown())
@@ -83,3 +88,64 @@ def test_websocket_disconnect():
     # But since websocket2 also disconnected, we can't read it easily.
     # Just passing since logic was covered.
     pass
+
+@pytest.mark.asyncio
+async def test_batch_updates():
+    from src.main import db_batcher
+    from src.models import Shape
+    from sqlalchemy import select
+    from src.database import AsyncSessionLocal
+
+    # Push add
+    await db_batcher.push("add", {
+        "id": "test_shape_1",
+        "type": "rect",
+        "left": 10,
+        "top": 20,
+        "width": 100,
+        "height": 50,
+        "fill": "red",
+        "z_index": 1
+    })
+
+    # Process batch
+    await db_batcher.process_batch()
+
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(select(Shape).filter(Shape.id == "test_shape_1"))
+        shape = result.scalars().first()
+        assert shape is not None
+        assert shape.type == "rect"
+        assert shape.left == 10
+        assert shape.top == 20
+        assert shape.fill == "red"
+
+    # Push modify
+    await db_batcher.push("modify", {
+        "id": "test_shape_1",
+        "left": 50,
+        "fill": "blue"
+    })
+
+    # Process batch
+    await db_batcher.process_batch()
+
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(select(Shape).filter(Shape.id == "test_shape_1"))
+        shape = result.scalars().first()
+        assert shape is not None
+        assert shape.left == 50
+        assert shape.fill == "blue"
+
+    # Push remove
+    await db_batcher.push("remove", {
+        "id": "test_shape_1"
+    })
+
+    # Process batch
+    await db_batcher.process_batch()
+
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(select(Shape).filter(Shape.id == "test_shape_1"))
+        shape = result.scalars().first()
+        assert shape is None
