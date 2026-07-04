@@ -16,6 +16,7 @@ from .models import Shape
 import asyncio
 from .database import AsyncSessionLocal
 from collections import OrderedDict
+from .redis_manager import redis_manager
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -42,14 +43,19 @@ class ConnectionManager:
             del self.active_connections[nickname]
             logger.info(f"User {nickname} disconnected")
 
-    async def broadcast(self, message: dict, exclude: str = None):
-        logger.info(f"Broadcasting: {message} excluding {exclude}")
+    async def local_broadcast(self, message: dict, exclude: str = None):
+        logger.info(f"Local broadcasting: {message} excluding {exclude}")
         for nickname, connection in self.active_connections.items():
             if nickname != exclude:
                 try:
                     await connection.send_text(json.dumps(message))
                 except Exception as e:
                     logger.error(f"Failed to send to {nickname}: {e}")
+
+    async def broadcast(self, message: dict, exclude: str = None):
+        # Tell redis manager to publish.
+        # It will broadcast across instances, and each instance will local_broadcast
+        await redis_manager.publish(message)
 
 manager = ConnectionManager()
 
@@ -164,11 +170,14 @@ async def db_writer_worker():
 async def startup_event():
     global db_worker_task
     db_worker_task = asyncio.create_task(db_writer_worker())
+    await redis_manager.connect()
+    await redis_manager.start_listening(manager)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
 @app.on_event("shutdown")
 async def shutdown_event():
+    await redis_manager.close()
     if db_worker_task:
         db_worker_task.cancel()
         try:
