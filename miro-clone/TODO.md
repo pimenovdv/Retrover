@@ -15,7 +15,7 @@
 ## 3. Backend & Database
 - [x] Optimize database writes (batch updates instead of per-event writes).
 - [x] Add Redis for faster WebSocket broadcast and state management.
-- [ ] Implement Board models (allow creating multiple different boards, currently there is only one global board).
+- [x] Implement Board models (allow creating multiple different boards, currently there is only one global board).
 
 ## 4. UI/UX
 - [ ] Improve toolbar design and add property panels (change colors, fonts, stroke width).

@@ -22,7 +22,7 @@ async def setup_db_sync():
 @pytest.mark.asyncio
 async def test_batch_updates(setup_db_sync):
     # Push add
-    await db_batcher.push("add", {
+    await db_batcher.push("add", { "board_id": "default",
         "id": "test_shape_1",
         "type": "rect",
         "left": 10,
@@ -46,7 +46,7 @@ async def test_batch_updates(setup_db_sync):
         assert shape.fill == "red"
 
     # Push modify
-    await db_batcher.push("modify", {
+    await db_batcher.push("modify", { "board_id": "default",
         "id": "test_shape_1",
         "left": 50,
         "fill": "blue"
@@ -63,7 +63,7 @@ async def test_batch_updates(setup_db_sync):
         assert shape.fill == "blue"
 
     # Push remove
-    await db_batcher.push("remove", {
+    await db_batcher.push("remove", { "board_id": "default",
         "id": "test_shape_1"
     })
 
@@ -78,7 +78,7 @@ async def test_batch_updates(setup_db_sync):
 @pytest.mark.asyncio
 async def test_batch_merge(setup_db_sync):
     # Add then immediately modify before batch processes
-    await db_batcher.push("add", {
+    await db_batcher.push("add", { "board_id": "default",
         "id": "test_shape_2",
         "type": "rect",
         "left": 10,
@@ -89,7 +89,7 @@ async def test_batch_merge(setup_db_sync):
         "z_index": 1
     })
 
-    await db_batcher.push("modify", {
+    await db_batcher.push("modify", { "board_id": "default",
         "id": "test_shape_2",
         "left": 50,
         "fill": "blue"

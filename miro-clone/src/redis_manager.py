@@ -43,8 +43,9 @@ class RedisManager:
                 if message["type"] == "message":
                     data = json.loads(message["data"])
                     sender = data.get("sender")
+                    board_id = data.get("board_id", "default")
                     # Broadcast to all local connections except sender
-                    await self.conn_manager.local_broadcast(data, exclude=sender)
+                    await self.conn_manager.local_broadcast(board_id, data, exclude=sender)
         except Exception as e:
             logger.error(f"Redis listen error: {e}")
 
