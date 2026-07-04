@@ -1,10 +1,18 @@
-from sqlalchemy import Column, String, Float, Integer, JSON
+from sqlalchemy import Column, String, Float, Integer, JSON, ForeignKey
+from sqlalchemy.orm import relationship
 from .database import Base
+
+class Board(Base):
+    __tablename__ = "boards"
+
+    id = Column(String, primary_key=True, index=True)
+    name = Column(String, nullable=True)
 
 class Shape(Base):
     __tablename__ = "shapes"
 
     id = Column(String, primary_key=True, index=True) # UUID string from frontend
+    board_id = Column(String, ForeignKey("boards.id"), index=True, nullable=False, default="default")
     type = Column(String, nullable=False) # 'rect', 'circle', 'text', 'i-text', 'image'
     z_index = Column(Integer, default=0, nullable=False)
 

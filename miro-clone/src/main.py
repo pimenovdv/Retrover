@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from .database import engine, Base, get_db
-from .models import Shape
+from .models import Shape, Board
 
 import asyncio
 from .database import AsyncSessionLocal
@@ -30,27 +30,32 @@ os.makedirs("uploads", exist_ok=True)
 
 class ConnectionManager:
     def __init__(self):
-        # Maps nickname to their WebSocket connection
-        self.active_connections: Dict[str, WebSocket] = {}
+        # Maps board_id -> {nickname -> WebSocket}
+        self.active_connections: Dict[str, Dict[str, WebSocket]] = {}
 
-    async def connect(self, websocket: WebSocket, nickname: str):
+    async def connect(self, websocket: WebSocket, board_id: str, nickname: str):
         await websocket.accept()
-        self.active_connections[nickname] = websocket
-        logger.info(f"User {nickname} connected")
+        if board_id not in self.active_connections:
+            self.active_connections[board_id] = {}
+        self.active_connections[board_id][nickname] = websocket
+        logger.info(f"User {nickname} connected to board {board_id}")
 
-    def disconnect(self, nickname: str):
-        if nickname in self.active_connections:
-            del self.active_connections[nickname]
-            logger.info(f"User {nickname} disconnected")
+    def disconnect(self, board_id: str, nickname: str):
+        if board_id in self.active_connections and nickname in self.active_connections[board_id]:
+            del self.active_connections[board_id][nickname]
+            logger.info(f"User {nickname} disconnected from board {board_id}")
+            if not self.active_connections[board_id]:
+                del self.active_connections[board_id]
 
-    async def local_broadcast(self, message: dict, exclude: str = None):
-        logger.info(f"Local broadcasting: {message} excluding {exclude}")
-        for nickname, connection in self.active_connections.items():
-            if nickname != exclude:
-                try:
-                    await connection.send_text(json.dumps(message))
-                except Exception as e:
-                    logger.error(f"Failed to send to {nickname}: {e}")
+    async def local_broadcast(self, board_id: str, message: dict, exclude: str = None):
+        logger.info(f"Local broadcasting to board {board_id}: {message} excluding {exclude}")
+        if board_id in self.active_connections:
+            for nickname, connection in self.active_connections[board_id].items():
+                if nickname != exclude:
+                    try:
+                        await connection.send_text(json.dumps(message))
+                    except Exception as e:
+                        logger.error(f"Failed to send to {nickname}: {e}")
 
     async def broadcast(self, message: dict, exclude: str = None):
         # Tell redis manager to publish.
@@ -65,10 +70,13 @@ class DatabaseBatcher:
         self.queue = OrderedDict() # id -> (action, obj_data)
         self.lock = asyncio.Lock()
 
-    async def push(self, action: str, obj_data: dict):
+    async def push(self, action: str, obj_data: dict, board_id: str = "default"):
         obj_id = obj_data.get("id")
         if not obj_id:
             return
+
+        # Inject board_id into obj_data for processing later
+        obj_data["board_id"] = board_id
 
         async with self.lock:
             if action == "remove":
@@ -108,6 +116,7 @@ class DatabaseBatcher:
                     if action == "add":
                         new_shape = Shape(
                             id=obj_id,
+                            board_id=obj_data.get("board_id", "default"),
                             type=obj_data.get("type"),
                             left=obj_data.get("left", 0),
                             top=obj_data.get("top", 0),
@@ -118,7 +127,7 @@ class DatabaseBatcher:
                             text=obj_data.get("text"),
                             fontSize=obj_data.get("fontSize"),
                             z_index=obj_data.get("z_index", 0),
-                            properties={k: v for k, v in obj_data.items() if k not in ["id", "type", "left", "top", "width", "height", "fill", "radius", "text", "fontSize", "z_index"]}
+                            properties={k: v for k, v in obj_data.items() if k not in ["id", "board_id", "type", "left", "top", "width", "height", "fill", "radius", "text", "fontSize", "z_index"]}
                         )
                         session.add(new_shape)
                     elif action == "modify":
@@ -137,7 +146,7 @@ class DatabaseBatcher:
 
                             current_props = dict(db_shape.properties or {})
                             for k, v in obj_data.items():
-                                if k not in ["id", "type", "left", "top", "width", "height", "fill", "radius", "text", "fontSize", "z_index"]:
+                                if k not in ["id", "board_id", "type", "left", "top", "width", "height", "fill", "radius", "text", "fontSize", "z_index"]:
                                     current_props[k] = v
                             db_shape.properties = current_props
                     elif action == "remove":
@@ -191,15 +200,29 @@ async def shutdown_event():
 async def get():
     return FileResponse("static/index.html")
 
-@app.websocket("/ws/{nickname}")
-async def websocket_endpoint(websocket: WebSocket, nickname: str, db: AsyncSession = Depends(get_db)):
-    await manager.connect(websocket, nickname)
+@app.websocket("/ws/{board_id}/{nickname}")
+async def websocket_endpoint(websocket: WebSocket, board_id: str, nickname: str, db: AsyncSession = Depends(get_db)):
+    await manager.connect(websocket, board_id, nickname)
+
+    # Ensure board exists
+    from sqlalchemy.exc import IntegrityError
+    board_result = await db.execute(select(Board).filter(Board.id == board_id))
+    board = board_result.scalars().first()
+    if not board:
+        try:
+            board = Board(id=board_id, name=f"Board {board_id}")
+            db.add(board)
+            await db.commit()
+        except IntegrityError:
+            await db.rollback()
+            # Board was created by another concurrent request, which is fine
+            pass
 
     # Ensure all pending db writes are flushed before querying existing shapes
     await db_batcher.process_batch()
 
     # Send all existing shapes to the newly connected user
-    result = await db.execute(select(Shape).order_by(Shape.z_index.asc()))
+    result = await db.execute(select(Shape).filter(Shape.board_id == board_id).order_by(Shape.z_index.asc()))
     shapes = result.scalars().all()
 
     initial_shapes = []
@@ -241,7 +264,7 @@ async def websocket_endpoint(websocket: WebSocket, nickname: str, db: AsyncSessi
             obj_id = obj_data.get("id")
 
             if action in ["add", "modify", "remove"]:
-                await db_batcher.push(action, obj_data)
+                await db_batcher.push(action, obj_data, board_id=board_id)
             elif action in ["cursor", "select", "deselect", "chat"]:
                 # Transient actions, no DB update
                 pass
@@ -251,15 +274,17 @@ async def websocket_endpoint(websocket: WebSocket, nickname: str, db: AsyncSessi
                 "type": "update",
                 "action": action,
                 "object": obj_data,
-                "sender": nickname
+                "sender": nickname,
+                "board_id": board_id
             }, exclude=nickname)
 
     except WebSocketDisconnect:
-        manager.disconnect(nickname)
+        manager.disconnect(board_id, nickname)
         await manager.broadcast({
             "type": "update",
             "action": "disconnect",
-            "sender": nickname
+            "sender": nickname,
+            "board_id": board_id
         })
 
 from fastapi import HTTPException

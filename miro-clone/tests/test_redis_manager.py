@@ -41,7 +41,8 @@ async def test_redis_manager_publish_listen():
 
     assert getattr(mock_conn_manager, 'local_broadcast_called', False) is True
     args, kwargs = mock_conn_manager.call_args
-    assert args[0] == test_msg
+    assert args[0] == "default"
+    assert args[1] == test_msg
     assert kwargs["exclude"] == "test_user"
 
     await rm.close()

@@ -1,6 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
     const loginModal = document.getElementById("login-modal");
     const joinBtn = document.getElementById("join-btn");
+    const boardIdInput = document.getElementById("board-id-input");
     const nicknameInput = document.getElementById("nickname-input");
     const toolbar = document.getElementById("toolbar");
     const canvasContainer = document.getElementById("canvas-container");
@@ -17,10 +18,12 @@ document.addEventListener("DOMContentLoaded", () => {
     let canvas;
     let ws;
     let nickname;
+    let boardId = "default";
     let isProcessingSync = false;
 
     joinBtn.addEventListener("click", () => {
         nickname = nicknameInput.value.trim();
+        boardId = boardIdInput.value.trim() || "default";
         if (nickname) {
             loginModal.style.display = "none";
             toolbar.style.display = "flex";
@@ -93,7 +96,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Connect WebSocket
         const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-        ws = new WebSocket(`${protocol}//${window.location.host}/ws/${nickname}`);
+        ws = new WebSocket(`${protocol}//${window.location.host}/ws/${boardId}/${nickname}`);
 
         ws.onopen = () => {
             console.log("Connected to WS");
