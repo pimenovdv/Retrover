@@ -130,6 +130,7 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             canvas.add(rect);
             canvas.setActiveObject(rect);
+            updatePropertiesPanel();
         });
 
         document.getElementById("btn-circle").addEventListener("click", () => {
@@ -143,6 +144,7 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             canvas.add(circle);
             canvas.setActiveObject(circle);
+            updatePropertiesPanel();
         });
 
         document.getElementById("btn-text").addEventListener("click", () => {
@@ -156,6 +158,7 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             canvas.add(text);
             canvas.setActiveObject(text);
+            updatePropertiesPanel();
         });
 
 
@@ -172,6 +175,7 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             canvas.add(line);
             canvas.setActiveObject(line);
+            updatePropertiesPanel();
         });
 
         document.getElementById("btn-arrow").addEventListener("click", () => {
@@ -555,7 +559,57 @@ document.addEventListener("DOMContentLoaded", () => {
 
         let currentSelection = [];
 
-        function handleSelection(opt) {
+
+    // Properties Panel Logic
+    const propertiesPanel = document.getElementById("properties-panel");
+    const propFill = document.getElementById("prop-fill");
+    const propStroke = document.getElementById("prop-stroke");
+    const propStrokeWidth = document.getElementById("prop-stroke-width");
+    const propFontFamily = document.getElementById("prop-font-family");
+
+    window.updatePropertiesPanel = function updatePropertiesPanel() {
+        const activeObject = canvas.getActiveObject();
+        if (!activeObject || activeObject.type === 'activeSelection') {
+            propertiesPanel.style.display = 'none';
+            return;
+        }
+
+        propertiesPanel.style.display = 'flex';
+
+        // Populate current values
+        if (activeObject.fill) propFill.value = activeObject.fill;
+        if (activeObject.stroke) propStroke.value = activeObject.stroke;
+        if (activeObject.strokeWidth !== undefined) propStrokeWidth.value = activeObject.strokeWidth;
+
+        if (activeObject.type === 'i-text' || activeObject.type === 'text') {
+            propFontFamily.parentElement.style.display = 'flex';
+            if (activeObject.fontFamily) propFontFamily.value = activeObject.fontFamily;
+        } else {
+            propFontFamily.parentElement.style.display = 'none';
+        }
+    }
+
+    [propFill, propStroke, propStrokeWidth, propFontFamily].forEach(input => {
+        input.addEventListener('change', (e) => {
+            const activeObject = canvas.getActiveObject();
+            if (!activeObject) return;
+
+            const prop = e.target.id.replace('prop-', '');
+            let val = e.target.value;
+
+            if (prop === 'stroke-width') val = parseInt(val, 10);
+
+            if (prop === 'fill') activeObject.set('fill', val);
+            if (prop === 'stroke') activeObject.set('stroke', val);
+            if (prop === 'stroke-width') activeObject.set('strokeWidth', val);
+            if (prop === 'font-family') activeObject.set('fontFamily', val);
+
+            canvas.renderAll();
+            canvas.fire('object:modified', { target: activeObject });
+        });
+    });
+
+function handleSelection(opt) {
             if (isProcessingSync) return;
             const newSelection = opt.selected || [];
             newSelection.forEach(obj => {
@@ -572,6 +626,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             });
             currentSelection = newSelection;
+            updatePropertiesPanel();
         }
 
         function handleDeselection(opt) {
@@ -583,6 +638,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             });
             currentSelection = [];
+            propertiesPanel.style.display = "none";
         }
 
     function handleRemoteUpdate(action, objData, sender) {
