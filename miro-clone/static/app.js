@@ -555,6 +555,42 @@ document.addEventListener("DOMContentLoaded", () => {
 
         let currentSelection = [];
 
+        const propertyPanel = document.getElementById("property-panel");
+        const propFill = document.getElementById("prop-fill");
+        const propStroke = document.getElementById("prop-stroke");
+        const propStrokeWidth = document.getElementById("prop-stroke-width");
+        const propFontFamily = document.getElementById("prop-font-family");
+        const propFontSize = document.getElementById("prop-font-size");
+
+        function ensureHexColor(color) {
+            if (!color) return "#000000";
+            const c = new fabric.Color(color);
+            return c.toHex() ? `#${c.toHex()}` : "#000000";
+        }
+
+        function updatePropertyPanel(obj) {
+            if (!obj) {
+                propertyPanel.style.display = "none";
+                return;
+            }
+            propertyPanel.style.display = "flex";
+
+            // Populate current values, handling named colors by converting to hex
+            propFill.value = ensureHexColor(obj.fill);
+            propStroke.value = ensureHexColor(obj.stroke);
+            propStrokeWidth.value = obj.strokeWidth || 1;
+
+            if (obj.type === 'text' || obj.type === 'i-text') {
+                propFontFamily.parentElement.style.display = "flex";
+                propFontSize.parentElement.style.display = "flex";
+                propFontFamily.value = obj.fontFamily || "Arial";
+                propFontSize.value = obj.fontSize || 20;
+            } else {
+                propFontFamily.parentElement.style.display = "none";
+                propFontSize.parentElement.style.display = "none";
+            }
+        }
+
         function handleSelection(opt) {
             if (isProcessingSync) return;
             const newSelection = opt.selected || [];
@@ -572,6 +608,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             });
             currentSelection = newSelection;
+
+            if (canvas.getActiveObject() && canvas.getActiveObject().type !== 'activeSelection') {
+                updatePropertyPanel(canvas.getActiveObject());
+            } else {
+                updatePropertyPanel(null);
+            }
         }
 
         function handleDeselection(opt) {
@@ -583,7 +625,37 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             });
             currentSelection = [];
+            updatePropertyPanel(null);
         }
+
+        // Apply property changes
+        function applyPropertyChange(propName, value) {
+            const activeObj = canvas.getActiveObject();
+            if (!activeObj || activeObj.type === 'activeSelection') return;
+
+            let numVal = value;
+            if (propName === 'strokeWidth' || propName === 'fontSize') {
+                numVal = parseInt(value, 10);
+            }
+
+            activeObj.set(propName, numVal);
+            canvas.renderAll();
+            canvas.fire('object:modified', { target: activeObj });
+        }
+
+        propFill.addEventListener('input', (e) => applyPropertyChange('fill', e.target.value));
+        propFill.addEventListener('change', (e) => applyPropertyChange('fill', e.target.value));
+
+        propStroke.addEventListener('input', (e) => applyPropertyChange('stroke', e.target.value));
+        propStroke.addEventListener('change', (e) => applyPropertyChange('stroke', e.target.value));
+
+        propStrokeWidth.addEventListener('input', (e) => applyPropertyChange('strokeWidth', e.target.value));
+        propStrokeWidth.addEventListener('change', (e) => applyPropertyChange('strokeWidth', e.target.value));
+
+        propFontFamily.addEventListener('change', (e) => applyPropertyChange('fontFamily', e.target.value));
+
+        propFontSize.addEventListener('input', (e) => applyPropertyChange('fontSize', e.target.value));
+        propFontSize.addEventListener('change', (e) => applyPropertyChange('fontSize', e.target.value));
 
     function handleRemoteUpdate(action, objData, sender) {
         if (action === "disconnect") {

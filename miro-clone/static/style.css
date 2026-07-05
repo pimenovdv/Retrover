@@ -22,6 +22,7 @@ body, html {
     border-radius: 8px;
     box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     display: flex;
+    flex-wrap: wrap;
     gap: 5px;
 }
 
@@ -32,6 +33,45 @@ body, html {
     background: #f0f0f0;
     border: 1px solid #ccc;
     border-radius: 4px;
+}
+
+#property-panel {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 100;
+    background: white;
+    padding: 10px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 12px;
+    min-width: 200px;
+}
+
+/* Ensure the chat panel does not overlap property panel if screen is small */
+@media (max-width: 800px) {
+    #property-panel {
+        top: auto;
+        bottom: 20px;
+        left: 20px;
+        right: auto;
+    }
+}
+
+#property-panel div {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#property-panel input, #property-panel select {
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 2px 4px;
+    font-size: 12px;
 }
 
 #toolbar button:hover {
