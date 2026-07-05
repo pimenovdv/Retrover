@@ -18,6 +18,6 @@
 - [x] Implement Board models (allow creating multiple different boards, currently there is only one global board).
 
 ## 4. UI/UX
-- [ ] Improve toolbar design and add property panels (change colors, fonts, stroke width).
+- [x] Improve toolbar design and add property panels (change colors, fonts, stroke width).
 - [ ] Add undo/redo functionality.
 - [ ] Make UI responsive for mobile devices.
