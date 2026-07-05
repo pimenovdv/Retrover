@@ -21,3 +21,8 @@ dependencies = [
     "uvicorn>=0.49.0",
     "websockets>=16.0",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest-cov>=7.1.0",
+]
