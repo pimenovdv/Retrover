@@ -174,3 +174,58 @@ def test_board_isolation():
                     # ws2 should have NO messages pending
                     # In starlette TestClient, we can't easily check for empty queue without blocking,
                     # but the routing isolation proves board isolation in local_broadcast.
+
+@pytest.mark.asyncio
+async def test_shape_properties_persistence():
+    from src.main import db_batcher
+    from src.models import Shape
+    from sqlalchemy import select
+    from src.database import AsyncSessionLocal
+    import os
+
+    os.environ["TESTING"] = "1"
+
+    await db_batcher.push("add", {
+        "id": "test_shape_props",
+        "type": "rect",
+        "left": 10,
+        "top": 20,
+        "width": 100,
+        "height": 50,
+        "fill": "red",
+        "z_index": 1,
+        "stroke": "black",
+        "strokeWidth": 5,
+        "fontFamily": "Arial"
+    })
+
+    await db_batcher.process_batch()
+
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(select(Shape).filter(Shape.id == "test_shape_props"))
+        shape = result.scalars().first()
+        assert shape is not None
+        assert shape.type == "rect"
+        assert shape.fill == "red"
+        # Unknown properties should go into the properties JSON
+        assert shape.properties.get("stroke") == "black"
+        assert shape.properties.get("strokeWidth") == 5
+        assert shape.properties.get("fontFamily") == "Arial"
+
+    # Modify properties
+    await db_batcher.push("modify", {
+        "id": "test_shape_props",
+        "stroke": "blue",
+        "strokeWidth": 10
+    })
+
+    await db_batcher.process_batch()
+
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(select(Shape).filter(Shape.id == "test_shape_props"))
+        shape = result.scalars().first()
+        assert shape is not None
+        assert shape.properties.get("stroke") == "blue"
+        assert shape.properties.get("strokeWidth") == 10
+        # Check if the previous property is preserved
+        assert shape.properties.get("fontFamily") == "Arial"

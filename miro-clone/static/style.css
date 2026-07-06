@@ -15,67 +15,86 @@ body, html {
 #toolbar {
     position: absolute;
     top: 20px;
-    left: 20px;
+    left: 50%;
+    transform: translateX(-50%);
     z-index: 100;
     background: white;
     padding: 10px;
     border-radius: 8px;
     box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-}
-
-#toolbar button {
-    padding: 6px 10px;
-    font-size: 12px;
-    cursor: pointer;
-    background: #f0f0f0;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-}
-
-#property-panel {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    z-index: 100;
-    background: white;
-    padding: 10px;
-    border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    display: flex;
-    flex-direction: column;
     gap: 8px;
-    font-size: 12px;
-    min-width: 200px;
-}
-
-/* Ensure the chat panel does not overlap property panel if screen is small */
-@media (max-width: 800px) {
-    #property-panel {
-        top: auto;
-        bottom: 20px;
-        left: 20px;
-        right: auto;
-    }
-}
-
-#property-panel div {
-    display: flex;
-    justify-content: space-between;
     align-items: center;
 }
 
-#property-panel input, #property-panel select {
-    border: 1px solid #ccc;
+#toolbar button {
+    padding: 8px 12px;
+    font-size: 13px;
+    cursor: pointer;
+    background: #ffffff;
+    border: 1px solid #ddd;
     border-radius: 4px;
-    padding: 2px 4px;
-    font-size: 12px;
+    transition: background 0.2s, box-shadow 0.2s;
+    white-space: nowrap;
 }
 
 #toolbar button:hover {
-    background: #e0e0e0;
+    background: #f0f0f0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.separator {
+    width: 1px;
+    height: 24px;
+    background-color: #ddd;
+    margin: 0 4px;
+}
+
+#properties-panel {
+    position: absolute;
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+    background: white;
+    padding: 10px 15px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.prop-group {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.prop-group label {
+    font-size: 12px;
+    color: #555;
+    font-weight: 500;
+}
+
+.prop-group input[type="color"] {
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.prop-group input[type="number"], .prop-group select {
+    padding: 4px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+.prop-group input[type="number"] {
+    width: 50px;
 }
 
 /* Modal Styles */
