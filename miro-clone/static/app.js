@@ -641,6 +641,35 @@ function handleSelection(opt) {
             propertiesPanel.style.display = "none";
         }
 
+        // Apply property changes
+        function applyPropertyChange(propName, value) {
+            const activeObj = canvas.getActiveObject();
+            if (!activeObj || activeObj.type === 'activeSelection') return;
+
+            let numVal = value;
+            if (propName === 'strokeWidth' || propName === 'fontSize') {
+                numVal = parseInt(value, 10);
+            }
+
+            activeObj.set(propName, numVal);
+            canvas.renderAll();
+            canvas.fire('object:modified', { target: activeObj });
+        }
+
+        propFill.addEventListener('input', (e) => applyPropertyChange('fill', e.target.value));
+        propFill.addEventListener('change', (e) => applyPropertyChange('fill', e.target.value));
+
+        propStroke.addEventListener('input', (e) => applyPropertyChange('stroke', e.target.value));
+        propStroke.addEventListener('change', (e) => applyPropertyChange('stroke', e.target.value));
+
+        propStrokeWidth.addEventListener('input', (e) => applyPropertyChange('strokeWidth', e.target.value));
+        propStrokeWidth.addEventListener('change', (e) => applyPropertyChange('strokeWidth', e.target.value));
+
+        propFontFamily.addEventListener('change', (e) => applyPropertyChange('fontFamily', e.target.value));
+
+        propFontSize.addEventListener('input', (e) => applyPropertyChange('fontSize', e.target.value));
+        propFontSize.addEventListener('change', (e) => applyPropertyChange('fontSize', e.target.value));
+
     function handleRemoteUpdate(action, objData, sender) {
         if (action === "disconnect") {
             if (activeUsers[sender]) {

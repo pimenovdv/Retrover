@@ -114,7 +114,9 @@ async def test_batch_updates():
     await db_batcher.push("modify", {
         "id": "test_shape_1",
         "left": 50,
-        "fill": "blue"
+        "fill": "blue",
+        "strokeWidth": 5,
+        "fontFamily": "Times New Roman"
     })
 
     await db_batcher.process_batch()
@@ -124,6 +126,10 @@ async def test_batch_updates():
         shape = result.scalars().first()
         assert shape is not None
         assert shape.left == 50
+        assert shape.fill == "blue"
+        assert shape.properties is not None
+        assert shape.properties.get("strokeWidth") == 5
+        assert shape.properties.get("fontFamily") == "Times New Roman"
 
     await db_batcher.push("remove", {
         "id": "test_shape_1"
