@@ -30,7 +30,7 @@ jobs:
         run: mkdir -p uploads
 
       - name: Install Playwright browsers
-        run: UV_PROJECT_ENVIRONMENT=$(pwd)/.venv uv run playwright install chromium
+        run: uv run playwright install chromium
 
       - name: Run tests with coverage
         run: UV_PROJECT_ENVIRONMENT=$(pwd)/.venv uv run pytest --cov=src --cov-fail-under=90
