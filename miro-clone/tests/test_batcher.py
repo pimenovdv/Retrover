@@ -106,3 +106,37 @@ async def test_batch_merge(setup_db_sync):
         assert shape.left == 50
         assert shape.top == 20
         assert shape.fill == "blue"
+
+@pytest.mark.asyncio
+async def test_batch_merge_conditions(setup_db_sync):
+    from src.main import db_batcher
+    # Test pushing without id
+    await db_batcher.push("add", {})
+
+    # Test modify modifying modify
+    await db_batcher.push("modify", { "board_id": "default",
+        "id": "test_shape_3",
+        "left": 10
+    })
+    await db_batcher.push("modify", { "board_id": "default",
+        "id": "test_shape_3",
+        "top": 20
+    })
+
+    # Test remove then add/modify
+    await db_batcher.push("remove", { "board_id": "default", "id": "test_shape_4" })
+    await db_batcher.push("add", { "board_id": "default", "id": "test_shape_4", "type": "rect" })
+
+    # Test remove then something else
+    await db_batcher.push("add", { "board_id": "default", "id": "test_shape_5", "type": "rect" })
+    await db_batcher.push("remove", { "board_id": "default", "id": "test_shape_5" })
+
+    await db_batcher.process_batch()
+
+@pytest.mark.asyncio
+async def test_batch_merge_unhandled_action():
+    from src.main import db_batcher
+    # Test pushing an unhandled action combo
+    await db_batcher.push("add", { "board_id": "default", "id": "test_shape_10", "type": "rect" })
+    await db_batcher.push("some_unknown_action", { "board_id": "default", "id": "test_shape_10" })
+    await db_batcher.process_batch()
