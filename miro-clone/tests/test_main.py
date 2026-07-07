@@ -392,6 +392,10 @@ async def test_initial_shapes_load_integrity(setup_db_sync):
             with client.websocket_connect(f"/ws/load_board2/{username}") as ws:
                 init = ws.receive_text()
                 data = json.loads(init)
+                if data.get("type") == "update":
+                    # Ignore user_joined broadcast from another thread
+                    init = ws.receive_text()
+                    data = json.loads(init)
                 assert data["type"] == "init"
                 assert len(data["data"]) == 1
 
