@@ -6,6 +6,17 @@ import threading
 import uvicorn
 from playwright.sync_api import sync_playwright
 
+import os
+import subprocess
+
+def setup_module(module):
+    # Ensure Playwright browsers are installed before running tests in this module
+    try:
+        subprocess.run(["uv", "run", "playwright", "install", "chromium"], check=True, capture_output=True)
+    except subprocess.CalledProcessError as e:
+        print(f"Failed to install Playwright browsers: {e}")
+
+
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from src.main import app
