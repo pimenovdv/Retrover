@@ -60,6 +60,7 @@ def test_server():
 
 @pytest.mark.skipif(os.environ.get('CI') == 'true', reason='Playwright dependencies fail on CI')
 def test_undo_redo(test_server):
+
     from playwright.sync_api import sync_playwright
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
