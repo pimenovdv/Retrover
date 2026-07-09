@@ -16,57 +16,94 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     let canvas;
-    window.canvas = null;
+    window.canvas = canvas;
     let ws;
     let nickname;
     let boardId = "default";
     let isProcessingSync = false;
+    let isUndoRedo = false;
+    let undoStack = [];
+    let redoStack = [];
 
-    window.undoStack = [];
-    window.redoStack = [];
-    window.objectStates = {};
+    window.undoStack = undoStack;
+    window.redoStack = redoStack;
 
-    function sendUpdate(action, object) {
-        if (!isProcessingSync && (action === 'add' || action === 'modify' || action === 'remove')) {
-            const prevState = window.objectStates[object.id];
-            let undoAction = null;
-            let undoObject = null;
+    function pushHistory(actionType, prevData, newData) {
+        if (isProcessingSync || isUndoRedo) return;
+        undoStack.push({ type: actionType, prev: prevData, next: newData });
+        redoStack.length = 0; // Clear redo stack on new action
+    }
 
-            if (action === 'add') {
-                undoAction = 'remove';
-                undoObject = { id: object.id };
-            } else if (action === 'remove') {
-                undoAction = 'add';
-                undoObject = prevState;
-            } else if (action === 'modify') {
-                if (prevState) {
-                    undoAction = 'modify';
-                    undoObject = prevState;
+    function performUndo() {
+        if (undoStack.length === 0) return;
+        const action = undoStack.pop();
+        redoStack.push(action);
+        applyAction(action, true);
+    }
+
+    function performRedo() {
+        if (redoStack.length === 0) return;
+        const action = redoStack.pop();
+        undoStack.push(action);
+        applyAction(action, false);
+    }
+
+    window.performUndo = performUndo;
+    window.performRedo = performRedo;
+
+    function applyAction(action, isUndo) {
+        isUndoRedo = true;
+
+        const state = isUndo ? action.prev : action.next;
+        const actionType = action.type;
+
+        if (actionType === 'add') {
+            if (isUndo) {
+                // Undo an add -> remove
+                const obj = getObjectById(action.next.id);
+                if (obj) {
+                    canvas.remove(obj);
+                    ws.send(JSON.stringify({ action: 'remove', object: { id: obj.id } }));
                 }
-            }
-
-            if (undoAction && undoObject) {
-                window.undoStack.push({
-                    action: action,
-                    forwardObject: JSON.parse(JSON.stringify(object)),
-                    undoAction: undoAction,
-                    undoObject: JSON.parse(JSON.stringify(undoObject))
-                });
-                window.redoStack = [];
-            }
-
-            // Update local objectStates map
-            if (action === 'remove') {
-                delete window.objectStates[object.id];
             } else {
-                if (action === 'add' || !window.objectStates[object.id]) {
-                    window.objectStates[object.id] = JSON.parse(JSON.stringify(object));
-                } else {
-                    Object.assign(window.objectStates[object.id], object);
-                }
+                // Redo an add -> add back
+                addShapeToCanvas(action.next);
+                ws.send(JSON.stringify({ action: 'add', object: action.next }));
+            }
+        } else if (actionType === 'remove') {
+            if (isUndo) {
+                // Undo a remove -> add back
+                action.prev.forEach(objData => {
+                    addShapeToCanvas(objData);
+                    ws.send(JSON.stringify({ action: 'add', object: objData }));
+                });
+            } else {
+                // Redo a remove -> remove
+                action.prev.forEach(objData => {
+                    const obj = getObjectById(objData.id);
+                    if (obj) {
+                        canvas.remove(obj);
+                        ws.send(JSON.stringify({ action: 'remove', object: { id: obj.id } }));
+                    }
+                });
+                canvas.discardActiveObject();
+            }
+        } else if (actionType === 'modify') {
+            // Both undo and redo of modify is just applying the respective state
+            const obj = getObjectById(state.id);
+            if (obj) {
+                obj.set(state);
+                obj.setCoords();
+                canvas.renderAll();
+
+                // For activeSelection elements we might need matrix transform,
+                // but since we save exact state properties, we can just send modify.
+                ws.send(JSON.stringify({ action: 'modify', object: state }));
             }
         }
-        ws.send(JSON.stringify({ action: action, object: object }));
+
+        canvas.renderAll();
+        isUndoRedo = false;
     }
 
     joinBtn.addEventListener("click", () => {
@@ -84,7 +121,6 @@ document.addEventListener("DOMContentLoaded", () => {
     function initApp() {
         // Init Fabric Canvas
         canvas = new fabric.Canvas('canvas', {
-            width: window.innerWidth,
             width: window.innerWidth,
             height: window.innerHeight,
             backgroundColor: '#f5f5f5'
@@ -160,7 +196,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 isProcessingSync = true;
                 message.data.forEach(shapeData => {
                     addShapeToCanvas(shapeData);
-                    window.objectStates[shapeData.id] = JSON.parse(JSON.stringify(shapeData));
                 });
                 isProcessingSync = false;
                         } else if (message.type === "update") {
@@ -303,9 +338,9 @@ document.addEventListener("DOMContentLoaded", () => {
              // In a real robust system, we would handle nested items better,
              // but for MVP we will remove the individual items from DB and add the group
              group.getObjects().forEach(obj => {
-                 sendUpdate('remove', { id: obj.id });
+                 ws.send(JSON.stringify({ action: 'remove', object: { id: obj.id } }));
              });
-             sendUpdate('add', group.toObject(['id', 'z_index']));
+             ws.send(JSON.stringify({ action: 'add', object: group.toObject(['id', 'z_index']) }));
 
              canvas.requestRenderAll();
         });
@@ -321,12 +356,12 @@ document.addEventListener("DOMContentLoaded", () => {
              // so they have absolute coordinates in their .left / .top
              const activeSelection = group.toActiveSelection();
 
-             sendUpdate('remove', { id: groupId });
+             ws.send(JSON.stringify({ action: 'remove', object: { id: groupId } }));
 
              activeSelection.getObjects().forEach(obj => {
                  if (!obj.id) obj.id = uuidv4();
                  // Now obj.left / obj.top are absolute coordinates
-                 sendUpdate('add', obj.toObject(['id', 'z_index']));
+                 ws.send(JSON.stringify({ action: 'add', object: obj.toObject(['id', 'z_index']) }));
              });
 
              canvas.requestRenderAll();
@@ -354,87 +389,46 @@ document.addEventListener("DOMContentLoaded", () => {
              objects.forEach((obj, index) => {
                  if (obj.z_index !== index) {
                      obj.z_index = index;
-                     sendUpdate('modify', { id: obj.id, z_index: index });
+                     ws.send(JSON.stringify({
+                         action: 'modify',
+                         object: { id: obj.id, z_index: index }
+                     }));
                  }
              });
         }
 
-        document.getElementById("btn-undo").addEventListener("click", () => {
-        if (window.undoStack.length === 0) return;
-        const actionObj = window.undoStack.pop();
-
-        isProcessingSync = true;
-        if (actionObj.undoAction === 'add') {
-            addShapeToCanvas(actionObj.undoObject);
-            window.objectStates[actionObj.undoObject.id] = JSON.parse(JSON.stringify(actionObj.undoObject));
-        } else if (actionObj.undoAction === 'modify') {
-            const obj = getObjectById(actionObj.undoObject.id);
-            if (obj) {
-                obj.set(actionObj.undoObject);
-                obj.setCoords();
-                if (actionObj.undoObject.z_index !== undefined) {
-                    canvas.moveTo(obj, actionObj.undoObject.z_index);
-                }
-                canvas.renderAll();
-            }
-            window.objectStates[actionObj.undoObject.id] = JSON.parse(JSON.stringify(actionObj.undoObject));
-        } else if (actionObj.undoAction === 'remove') {
-            const obj = getObjectById(actionObj.undoObject.id);
-            if (obj) canvas.remove(obj);
-            delete window.objectStates[actionObj.undoObject.id];
-        }
-        isProcessingSync = false;
-
-        ws.send(JSON.stringify({ action: actionObj.undoAction, object: actionObj.undoObject }));
-        window.redoStack.push(actionObj);
-    });
-
-    document.getElementById("btn-redo").addEventListener("click", () => {
-        if (window.redoStack.length === 0) return;
-        const actionObj = window.redoStack.pop();
-
-        isProcessingSync = true;
-        if (actionObj.action === 'add') {
-            addShapeToCanvas(actionObj.forwardObject);
-            window.objectStates[actionObj.forwardObject.id] = JSON.parse(JSON.stringify(actionObj.forwardObject));
-        } else if (actionObj.action === 'modify') {
-            const obj = getObjectById(actionObj.forwardObject.id);
-            if (obj) {
-                obj.set(actionObj.forwardObject);
-                obj.setCoords();
-                if (actionObj.forwardObject.z_index !== undefined) {
-                    canvas.moveTo(obj, actionObj.forwardObject.z_index);
-                }
-                canvas.renderAll();
-            }
-            window.objectStates[actionObj.forwardObject.id] = JSON.parse(JSON.stringify(actionObj.forwardObject));
-        } else if (actionObj.action === 'remove') {
-            const obj = getObjectById(actionObj.forwardObject.id);
-            if (obj) canvas.remove(obj);
-            delete window.objectStates[actionObj.forwardObject.id];
-        }
-        isProcessingSync = false;
-
-        ws.send(JSON.stringify({ action: actionObj.action, object: actionObj.forwardObject }));
-        window.undoStack.push(actionObj);
-    });
-
-    document.getElementById("btn-clear").addEventListener("click", () => {
+        document.getElementById("btn-clear").addEventListener("click", () => {
             canvas.discardActiveObject();
             canvas.requestRenderAll();
         });
 
         // Canvas events -> WebSocket
         canvas.on('object:added', (e) => {
-            if (isProcessingSync) return;
+            if (isProcessingSync || isUndoRedo) return;
             const obj = e.target;
             if (!obj.id) obj.id = uuidv4(); // fallback
 
-            sendUpdate('add', obj.toObject(['id', 'z_index']));
+            const objData = obj.toObject(['id', 'z_index']);
+            pushHistory('add', null, objData);
+
+            ws.send(JSON.stringify({
+                action: 'add',
+                object: objData
+            }));
+        });
+
+        canvas.on('mouse:down', (e) => {
+            if (e.target && e.target.type !== 'activeSelection') {
+                e.target._originalState = e.target.toObject(['id', 'z_index']);
+            } else if (e.target && e.target.type === 'activeSelection') {
+                e.target.getObjects().forEach(o => {
+                    o._originalState = o.toObject(['id', 'z_index']);
+                });
+            }
         });
 
         canvas.on('object:modified', (e) => {
-            if (isProcessingSync) return;
+            if (isProcessingSync || isUndoRedo) return;
             const obj = e.target;
 
             if (obj.type === 'activeSelection') {
@@ -447,20 +441,35 @@ document.addEventListener("DOMContentLoaded", () => {
                     const matrix = o.calcTransformMatrix();
                     const point = fabric.util.qrDecompose(matrix);
 
+                    const newState = {
+                        id: o.id,
+                        left: point.translateX,
+                        top: point.translateY,
+                        scaleX: point.scaleX,
+                        scaleY: point.scaleY,
+                        angle: point.angle
+                    };
+
+                    if (o._originalState) {
+                        pushHistory('modify', o._originalState, Object.assign({}, o._originalState, newState));
+                        o._originalState = null;
+                    }
+
                     ws.send(JSON.stringify({
                         action: 'modify',
-                        object: {
-                            id: o.id,
-                            left: point.translateX,
-                            top: point.translateY,
-                            scaleX: point.scaleX,
-                            scaleY: point.scaleY,
-                            angle: point.angle
-                        }
+                        object: newState
                     }));
                 });
             } else {
-                sendUpdate('modify', obj.toObject(['id', 'z_index']));
+                const newState = obj.toObject(['id', 'z_index']);
+                if (obj._originalState) {
+                    pushHistory('modify', obj._originalState, newState);
+                    obj._originalState = null;
+                }
+                ws.send(JSON.stringify({
+                    action: 'modify',
+                    object: newState
+                }));
             }
         });
 
@@ -544,19 +553,41 @@ document.addEventListener("DOMContentLoaded", () => {
 
                  const activeObjects = canvas.getActiveObjects();
                  if (activeObjects.length) {
+                     const removedObjects = [];
                      activeObjects.forEach(obj => {
                          if (isProcessingSync) return;
-                         sendUpdate('remove', { id: obj.id });
+                         removedObjects.push(obj.toObject(['id', 'z_index']));
+                         ws.send(JSON.stringify({
+                             action: 'remove',
+                             object: { id: obj.id }
+                         }));
                          canvas.remove(obj);
                      });
+                     if (removedObjects.length > 0) {
+                         pushHistory('remove', removedObjects, null);
+                     }
                      canvas.discardActiveObject();
                  }
+             } else if (e.key === 'z' && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
+                 e.preventDefault();
+                 performUndo();
+             } else if ((e.key === 'y' && (e.ctrlKey || e.metaKey)) || (e.key === 'z' && (e.ctrlKey || e.metaKey) && e.shiftKey)) {
+                 e.preventDefault();
+                 performRedo();
              }
+        });
+
+        document.getElementById("btn-undo").addEventListener("click", () => {
+            performUndo();
+        });
+
+        document.getElementById("btn-redo").addEventListener("click", () => {
+            performRedo();
         });
     }
 
     function addShapeToCanvas(shapeData) {
-        fabric.util.enlivensObjects([shapeData], (objects) => {
+        fabric.util.enlivenObjects([shapeData], (objects) => {
             const origRenderOnAddRemove = canvas.renderOnAddRemove;
             canvas.renderOnAddRemove = false;
 
@@ -698,13 +729,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (prop === 'stroke-width') val = parseInt(val, 10);
 
+            const originalState = activeObject.toObject(['id', 'z_index']);
+
             if (prop === 'fill') activeObject.set('fill', val);
             if (prop === 'stroke') activeObject.set('stroke', val);
             if (prop === 'stroke-width') activeObject.set('strokeWidth', val);
             if (prop === 'font-family') activeObject.set('fontFamily', val);
 
+            const newState = activeObject.toObject(['id', 'z_index']);
+            pushHistory('modify', originalState, newState);
+
             canvas.renderAll();
-            canvas.fire('object:modified', { target: activeObject });
+
+            ws.send(JSON.stringify({
+                action: 'modify',
+                object: newState
+            }));
         });
     });
 
