@@ -12,7 +12,7 @@ import subprocess
 def setup_module(module):
     # Ensure Playwright browsers are installed before running tests in this module
     try:
-        subprocess.run("uv run playwright install --with-deps chromium", check=True, shell=True, capture_output=False)
+        subprocess.run([sys.executable, "-m", "playwright", "install", "--with-deps", "chromium"], check=True)
     except subprocess.CalledProcessError as e:
         print(f"Failed to install Playwright browsers: {e}")
 
