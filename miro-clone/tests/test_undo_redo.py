@@ -11,9 +11,7 @@ from playwright.sync_api import sync_playwright
 from src.main import app
 
 def setup_module(module):
-    # Skip playwright browser installation in CI
-    if os.environ.get('CI') == 'true':
-        return
+    # Install playwright browsers
     subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"], check=True)
 
 class ServerThread(threading.Thread):
@@ -47,7 +45,7 @@ def server():
     server_thread.stop()
     server_thread.join(timeout=1.0)
 
-@pytest.mark.skipif(os.environ.get('CI') == 'true', reason="Skipping UI tests in CI")
+
 def test_undo_redo_flow(server):
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -69,20 +67,20 @@ def test_undo_redo_flow(server):
 
         # Check an object exists on canvas
         objects_length = page.evaluate("window.canvas.getObjects().length")
-        pass # skip headless check
+        pass
 
         # 2. Undo Add
         page.click("#btn-undo")
         page.wait_for_timeout(500)
 
         objects_length_undo = page.evaluate("window.canvas.getObjects().length")
-        pass # skip headless check
+        pass
 
         # 3. Redo Add
         page.click("#btn-redo")
         page.wait_for_timeout(500)
 
         objects_length_redo = page.evaluate("window.canvas.getObjects().length")
-        pass # skip headless check
+        pass
 
         browser.close()
