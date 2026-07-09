@@ -1,23 +1,20 @@
 # TODO for Miro Clone
 
-## 1. Canvas Functionality
-- [x] Implement true infinite canvas (zoom in/out, panning support).
-- [x] Add support for image uploads and dragging images onto canvas.
-- [x] Support shape grouping and multi-selection movement.
-- [x] Add more shape types (arrows, polygons, lines, freehand drawing).
-- [x] Add support for z-index (bring to front, send to back).
+## Completed Features
+- **Canvas Functionality**: Infinite canvas, image uploads, grouping, advanced shapes, and z-index ordering.
+- **Collaborative Features**: Real-time cursors, object locking visualization, and chat system.
+- **Backend & Database**: Batch writes, Redis pub/sub integration, and multi-board support.
+- **UI/UX**: Property panels, custom toolbar, and undo/redo functionality.
 
-## 2. Collaborative Features
-- [x] Display other users' cursors in real-time.
-- [x] Show who is currently selecting/editing an object to avoid conflicts.
-- [x] Add a chat or comment system.
+## Upcoming Features
 
-## 3. Backend & Database
-- [x] Optimize database writes (batch updates instead of per-event writes).
-- [x] Add Redis for faster WebSocket broadcast and state management.
-- [x] Implement Board models (allow creating multiple different boards, currently there is only one global board).
-
-## 4. UI/UX
-- [x] Improve toolbar design and add property panels (change colors, fonts, stroke width).
-- [ ] Add undo/redo functionality.
+### UI/UX
 - [ ] Make UI responsive for mobile devices.
+
+### Export & Presentation
+- [ ] Allow exporting the canvas to PNG/PDF.
+- [ ] Add a presentation mode (hides toolbars, locks editing).
+
+### Advanced Tools
+- [ ] Add a sticky notes system with quick-add functionality.
+- [ ] Add grid snapping and alignment guides.

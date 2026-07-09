@@ -16,10 +16,58 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     let canvas;
+    window.canvas = null;
     let ws;
     let nickname;
     let boardId = "default";
     let isProcessingSync = false;
+
+    window.undoStack = [];
+    window.redoStack = [];
+    window.objectStates = {};
+
+    function sendUpdate(action, object) {
+        if (!isProcessingSync && (action === 'add' || action === 'modify' || action === 'remove')) {
+            const prevState = window.objectStates[object.id];
+            let undoAction = null;
+            let undoObject = null;
+
+            if (action === 'add') {
+                undoAction = 'remove';
+                undoObject = { id: object.id };
+            } else if (action === 'remove') {
+                undoAction = 'add';
+                undoObject = prevState;
+            } else if (action === 'modify') {
+                if (prevState) {
+                    undoAction = 'modify';
+                    undoObject = prevState;
+                }
+            }
+
+            if (undoAction && undoObject) {
+                window.undoStack.push({
+                    action: action,
+                    forwardObject: JSON.parse(JSON.stringify(object)),
+                    undoAction: undoAction,
+                    undoObject: JSON.parse(JSON.stringify(undoObject))
+                });
+                window.redoStack = [];
+            }
+
+            // Update local objectStates map
+            if (action === 'remove') {
+                delete window.objectStates[object.id];
+            } else {
+                if (action === 'add' || !window.objectStates[object.id]) {
+                    window.objectStates[object.id] = JSON.parse(JSON.stringify(object));
+                } else {
+                    Object.assign(window.objectStates[object.id], object);
+                }
+            }
+        }
+        ws.send(JSON.stringify({ action: action, object: object }));
+    }
 
     joinBtn.addEventListener("click", () => {
         nickname = nicknameInput.value.trim();
@@ -37,9 +85,11 @@ document.addEventListener("DOMContentLoaded", () => {
         // Init Fabric Canvas
         canvas = new fabric.Canvas('canvas', {
             width: window.innerWidth,
+            width: window.innerWidth,
             height: window.innerHeight,
             backgroundColor: '#f5f5f5'
         });
+        window.canvas = canvas;
 
         // Resize handling
         window.addEventListener('resize', () => {
@@ -110,6 +160,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 isProcessingSync = true;
                 message.data.forEach(shapeData => {
                     addShapeToCanvas(shapeData);
+                    window.objectStates[shapeData.id] = JSON.parse(JSON.stringify(shapeData));
                 });
                 isProcessingSync = false;
                         } else if (message.type === "update") {
@@ -252,9 +303,9 @@ document.addEventListener("DOMContentLoaded", () => {
              // In a real robust system, we would handle nested items better,
              // but for MVP we will remove the individual items from DB and add the group
              group.getObjects().forEach(obj => {
-                 ws.send(JSON.stringify({ action: 'remove', object: { id: obj.id } }));
+                 sendUpdate('remove', { id: obj.id });
              });
-             ws.send(JSON.stringify({ action: 'add', object: group.toObject(['id', 'z_index']) }));
+             sendUpdate('add', group.toObject(['id', 'z_index']));
 
              canvas.requestRenderAll();
         });
@@ -270,12 +321,12 @@ document.addEventListener("DOMContentLoaded", () => {
              // so they have absolute coordinates in their .left / .top
              const activeSelection = group.toActiveSelection();
 
-             ws.send(JSON.stringify({ action: 'remove', object: { id: groupId } }));
+             sendUpdate('remove', { id: groupId });
 
              activeSelection.getObjects().forEach(obj => {
                  if (!obj.id) obj.id = uuidv4();
                  // Now obj.left / obj.top are absolute coordinates
-                 ws.send(JSON.stringify({ action: 'add', object: obj.toObject(['id', 'z_index']) }));
+                 sendUpdate('add', obj.toObject(['id', 'z_index']));
              });
 
              canvas.requestRenderAll();
@@ -303,15 +354,72 @@ document.addEventListener("DOMContentLoaded", () => {
              objects.forEach((obj, index) => {
                  if (obj.z_index !== index) {
                      obj.z_index = index;
-                     ws.send(JSON.stringify({
-                         action: 'modify',
-                         object: { id: obj.id, z_index: index }
-                     }));
+                     sendUpdate('modify', { id: obj.id, z_index: index });
                  }
              });
         }
 
-        document.getElementById("btn-clear").addEventListener("click", () => {
+        document.getElementById("btn-undo").addEventListener("click", () => {
+        if (window.undoStack.length === 0) return;
+        const actionObj = window.undoStack.pop();
+
+        isProcessingSync = true;
+        if (actionObj.undoAction === 'add') {
+            addShapeToCanvas(actionObj.undoObject);
+            window.objectStates[actionObj.undoObject.id] = JSON.parse(JSON.stringify(actionObj.undoObject));
+        } else if (actionObj.undoAction === 'modify') {
+            const obj = getObjectById(actionObj.undoObject.id);
+            if (obj) {
+                obj.set(actionObj.undoObject);
+                obj.setCoords();
+                if (actionObj.undoObject.z_index !== undefined) {
+                    canvas.moveTo(obj, actionObj.undoObject.z_index);
+                }
+                canvas.renderAll();
+            }
+            window.objectStates[actionObj.undoObject.id] = JSON.parse(JSON.stringify(actionObj.undoObject));
+        } else if (actionObj.undoAction === 'remove') {
+            const obj = getObjectById(actionObj.undoObject.id);
+            if (obj) canvas.remove(obj);
+            delete window.objectStates[actionObj.undoObject.id];
+        }
+        isProcessingSync = false;
+
+        ws.send(JSON.stringify({ action: actionObj.undoAction, object: actionObj.undoObject }));
+        window.redoStack.push(actionObj);
+    });
+
+    document.getElementById("btn-redo").addEventListener("click", () => {
+        if (window.redoStack.length === 0) return;
+        const actionObj = window.redoStack.pop();
+
+        isProcessingSync = true;
+        if (actionObj.action === 'add') {
+            addShapeToCanvas(actionObj.forwardObject);
+            window.objectStates[actionObj.forwardObject.id] = JSON.parse(JSON.stringify(actionObj.forwardObject));
+        } else if (actionObj.action === 'modify') {
+            const obj = getObjectById(actionObj.forwardObject.id);
+            if (obj) {
+                obj.set(actionObj.forwardObject);
+                obj.setCoords();
+                if (actionObj.forwardObject.z_index !== undefined) {
+                    canvas.moveTo(obj, actionObj.forwardObject.z_index);
+                }
+                canvas.renderAll();
+            }
+            window.objectStates[actionObj.forwardObject.id] = JSON.parse(JSON.stringify(actionObj.forwardObject));
+        } else if (actionObj.action === 'remove') {
+            const obj = getObjectById(actionObj.forwardObject.id);
+            if (obj) canvas.remove(obj);
+            delete window.objectStates[actionObj.forwardObject.id];
+        }
+        isProcessingSync = false;
+
+        ws.send(JSON.stringify({ action: actionObj.action, object: actionObj.forwardObject }));
+        window.undoStack.push(actionObj);
+    });
+
+    document.getElementById("btn-clear").addEventListener("click", () => {
             canvas.discardActiveObject();
             canvas.requestRenderAll();
         });
@@ -322,10 +430,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const obj = e.target;
             if (!obj.id) obj.id = uuidv4(); // fallback
 
-            ws.send(JSON.stringify({
-                action: 'add',
-                object: obj.toObject(['id', 'z_index'])
-            }));
+            sendUpdate('add', obj.toObject(['id', 'z_index']));
         });
 
         canvas.on('object:modified', (e) => {
@@ -355,10 +460,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     }));
                 });
             } else {
-                ws.send(JSON.stringify({
-                    action: 'modify',
-                    object: obj.toObject(['id', 'z_index'])
-                }));
+                sendUpdate('modify', obj.toObject(['id', 'z_index']));
             }
         });
 
@@ -444,10 +546,7 @@ document.addEventListener("DOMContentLoaded", () => {
                  if (activeObjects.length) {
                      activeObjects.forEach(obj => {
                          if (isProcessingSync) return;
-                         ws.send(JSON.stringify({
-                             action: 'remove',
-                             object: { id: obj.id }
-                         }));
+                         sendUpdate('remove', { id: obj.id });
                          canvas.remove(obj);
                      });
                      canvas.discardActiveObject();
