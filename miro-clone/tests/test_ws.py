@@ -1,5 +1,6 @@
 import pytest
 import os
+os.environ["TESTING"] = "1"
 import asyncio
 from fastapi.testclient import TestClient
 import json

@@ -9,12 +9,7 @@ from playwright.sync_api import sync_playwright
 import os
 import subprocess
 
-def setup_module(module):
-    # Ensure Playwright browsers are installed before running tests in this module
-    try:
-        subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"], check=True)
-    except subprocess.CalledProcessError as e:
-        print(f"Failed to install Playwright browsers: {e}")
+
 
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -111,5 +106,9 @@ def test_undo_redo(test_server):
 
         redo_len = page.evaluate("() => { return window.redoStack ? window.redoStack.length : -1; }")
         assert redo_len == 0
+
+        # Verify canvas items visually restored
+        canvas_objects = page.evaluate("() => { return window.canvas ? window.canvas.getObjects().length : -1; }")
+        assert canvas_objects > 0
 
         browser.close()
