@@ -243,3 +243,37 @@ body, html {
     font-size: 12px;
     white-space: nowrap;
 }
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    #toolbar {
+        flex-wrap: wrap;
+        max-width: 95vw;
+        width: 95%;
+        box-sizing: border-box;
+    }
+    #properties-panel {
+        flex-wrap: wrap;
+        max-width: 95vw;
+        top: 250px;
+        bottom: auto;
+        left: 2.5%;
+        transform: none;
+        width: 95%;
+        box-sizing: border-box;
+    }
+    #chat-panel {
+        width: 95%;
+        height: 200px;
+        bottom: 20px;
+        right: auto;
+        left: 2.5%;
+        box-sizing: border-box;
+    }
+}
+#chat-panel {
+    z-index: 1000;
+}
+#properties-panel {
+    z-index: 1000;
+}
