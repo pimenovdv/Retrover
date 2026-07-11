@@ -243,3 +243,39 @@ body, html {
     font-size: 12px;
     white-space: nowrap;
 }
+
+/* Mobile Responsive Adjustments */
+@media (max-width: 768px) {
+    #toolbar {
+        top: 10px;
+        width: 90%;
+        flex-wrap: wrap;
+        justify-content: center;
+        padding: 5px;
+    }
+
+    #toolbar button {
+        padding: 6px 8px;
+        font-size: 11px;
+    }
+
+    .separator {
+        display: none;
+    }
+
+    #properties-panel {
+        top: 120px;
+        width: 90%;
+        flex-wrap: wrap;
+        justify-content: center;
+        padding: 5px;
+    }
+
+    #chat-panel {
+        width: calc(100% - 40px);
+        height: 250px;
+        bottom: 10px;
+        right: 20px;
+        left: 20px;
+    }
+}
