@@ -1,4 +1,7 @@
 import os
+
+os.environ["TESTING"] = "1"
+
 import threading
 import time
 import pytest
@@ -12,7 +15,6 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 @pytest.fixture(scope="module")
 def server():
-    os.environ["TESTING"] = "1"
     from src.main import app
 
     def run_server():
