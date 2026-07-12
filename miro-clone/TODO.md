@@ -6,7 +6,7 @@
 - UI and Tooling (properties panel for colors/fonts, stroke width, undo/redo stack).
 
 ## To-Do
-- [ ] Make UI responsive for mobile devices.
+- [x] Make UI responsive for mobile devices.
 - [ ] Add PDF and document upload support (preview pages as images).
 - [ ] Add minimap for easier navigation across large boards.
 - [ ] Add copy/paste support for canvas elements using keyboard shortcuts.
