@@ -17,16 +17,15 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 def server():
     from src.main import app
 
-    def run_server():
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        uvicorn.run(app, host="127.0.0.1", port=8002, log_level="error")
+    config = uvicorn.Config(app=app, host="127.0.0.1", port=8002, log_level="error")
+    server_instance = uvicorn.Server(config)
 
-    thread = threading.Thread(target=run_server, daemon=True)
+    thread = threading.Thread(target=server_instance.run, daemon=True)
     thread.start()
     time.sleep(1) # wait for server to start
     yield
-    # No explicit shutdown needed for daemon thread in test suite
+    server_instance.should_exit = True
+    thread.join(timeout=2)
 
 @pytest.mark.skipif(os.environ.get("CI") == "true", reason="Skipping UI tests in CI")
 def test_mobile_ui_layout(server):
