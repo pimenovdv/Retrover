@@ -243,3 +243,47 @@ body, html {
     font-size: 12px;
     white-space: nowrap;
 }
+
+/* Responsive styles for mobile devices */
+@media (max-width: 768px) {
+    #toolbar {
+        width: 90%;
+        flex-wrap: wrap;
+        justify-content: center;
+        top: 10px;
+        gap: 4px;
+        padding: 5px;
+    }
+
+    #toolbar button {
+        padding: 6px 8px;
+        font-size: 11px;
+    }
+
+    #properties-panel {
+        top: auto;
+        bottom: 80px;
+        width: 90%;
+        flex-wrap: wrap;
+        justify-content: center;
+        padding: 8px;
+    }
+
+    .prop-group input[type="number"], .prop-group select {
+        font-size: 11px;
+        padding: 2px;
+    }
+
+    #chat-panel {
+        width: 250px;
+        height: 300px;
+        bottom: 10px;
+        right: 10px;
+    }
+
+    .modal-content {
+        width: 90%;
+        padding: 20px;
+        box-sizing: border-box;
+    }
+}
