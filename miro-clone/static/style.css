@@ -244,24 +244,42 @@ body, html {
     white-space: nowrap;
 }
 
-/* Mobile Responsiveness */
+/* Responsive styles for mobile devices */
 @media (max-width: 768px) {
     #toolbar {
-        flex-wrap: wrap;
-        max-width: 95vw;
         width: 95%;
+        max-width: 95vw;
+        flex-wrap: wrap;
+        justify-content: center;
+        top: 10px;
+        gap: 4px;
+        padding: 5px;
         box-sizing: border-box;
     }
+
+    #toolbar button {
+        padding: 6px 8px;
+        font-size: 11px;
+    }
+
     #properties-panel {
-        flex-wrap: wrap;
-        max-width: 95vw;
         top: 250px;
         bottom: auto;
+        width: 95%;
+        max-width: 95vw;
         left: 2.5%;
         transform: none;
-        width: 95%;
+        flex-wrap: wrap;
+        justify-content: center;
+        padding: 8px;
         box-sizing: border-box;
     }
+
+    .prop-group input[type="number"], .prop-group select {
+        font-size: 11px;
+        padding: 2px;
+    }
+
     #chat-panel {
         width: 95%;
         height: 200px;
@@ -270,7 +288,14 @@ body, html {
         left: 2.5%;
         box-sizing: border-box;
     }
+
+    .modal-content {
+        width: 90%;
+        padding: 20px;
+        box-sizing: border-box;
+    }
 }
+
 #chat-panel {
     z-index: 1000;
 }
