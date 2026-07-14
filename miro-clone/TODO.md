@@ -7,6 +7,6 @@
 
 ## To-Do
 - [x] Make UI responsive for mobile devices.
-- [ ] Add PDF and document upload support (preview pages as images).
+- [x] Add PDF and document upload support (preview pages as images).
 - [ ] Add minimap for easier navigation across large boards.
 - [ ] Add copy/paste support for canvas elements using keyboard shortcuts.

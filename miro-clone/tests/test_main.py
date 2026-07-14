@@ -346,6 +346,31 @@ async def test_upload_image_endpoint():
 
         os.remove(test_file_path)
 
+
+@pytest.mark.asyncio
+async def test_upload_pdf_endpoint():
+    import fitz
+    os.environ["TESTING"] = "1"
+    with TestClient(app) as client:
+        test_file_path = "test_doc.pdf"
+
+        # Create a real dummy PDF
+        doc = fitz.open()
+        page = doc.new_page()
+        page.insert_text((50, 50), "Hello PDF Test!")
+        doc.save(test_file_path)
+        doc.close()
+
+        with open(test_file_path, "rb") as f:
+            response = client.post("/upload", files={"file": ("test_doc.pdf", f, "application/pdf")})
+            assert response.status_code == 200
+            json_response = response.json()
+            assert "urls" in json_response
+            assert len(json_response["urls"]) == 1
+            assert json_response["urls"][0].endswith(".png")
+
+        os.remove(test_file_path)
+
 @pytest.mark.asyncio
 async def test_upload_invalid_type_endpoint():
     os.environ["TESTING"] = "1"

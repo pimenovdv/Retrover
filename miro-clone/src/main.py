@@ -291,13 +291,14 @@ from fastapi import HTTPException
 @app.post("/upload")
 async def upload_image(file: UploadFile = File(...)):
     import uuid
+    import fitz
 
-    allowed_types = ["image/jpeg", "image/png", "image/gif", "image/webp"]
+    allowed_types = ["image/jpeg", "image/png", "image/gif", "image/webp", "application/pdf"]
     if file.content_type not in allowed_types:
-        raise HTTPException(status_code=400, detail="Invalid file type. Only images are allowed.")
+        raise HTTPException(status_code=400, detail="Invalid file type. Only images and PDFs are allowed.")
 
     ext = file.filename.split('.')[-1].lower() if '.' in file.filename else 'png'
-    if ext not in ['jpg', 'jpeg', 'png', 'gif', 'webp']:
+    if ext not in ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf']:
         raise HTTPException(status_code=400, detail="Invalid file extension.")
 
     filename = f"{uuid.uuid4()}.{ext}"
@@ -306,5 +307,22 @@ async def upload_image(file: UploadFile = File(...)):
     async with aiofiles.open(filepath, 'wb') as out_file:
         content = await file.read()
         await out_file.write(content)
+
+    if ext == 'pdf':
+        urls = []
+        doc = fitz.open(filepath)
+        for page_num in range(len(doc)):
+            page = doc.load_page(page_num)
+            pix = page.get_pixmap()
+            page_filename = f"{uuid.uuid4()}.png"
+            page_filepath = os.path.join("uploads", page_filename)
+            pix.save(page_filepath)
+            urls.append(f"/uploads/{page_filename}")
+        doc.close()
+
+        # Clean up the original pdf
+        os.remove(filepath)
+
+        return {"urls": urls}
 
     return {"url": f"/uploads/{filename}"}

@@ -506,7 +506,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         async function uploadAndAddImage(file, x, y, isCanvasCoords=false) {
-            if (!file.type.startsWith('image/')) return;
+            if (!file.type.startsWith('image/') && file.type !== 'application/pdf') return;
 
             const formData = new FormData();
             formData.append("file", file);
@@ -527,17 +527,40 @@ document.addEventListener("DOMContentLoaded", () => {
                     canvasY = pointer.y;
                 }
 
-                fabric.Image.fromURL(data.url, (img) => {
-                    const id = uuidv4();
-                    img.set({
-                        left: canvasX,
-                        top: canvasY,
-                        id: id,
-                        type: 'image'
+                if (data.urls) {
+                    // PDF pages
+                    let currentY = canvasY;
+                    for (const url of data.urls) {
+                        await new Promise((resolve) => {
+                            fabric.Image.fromURL(url, (img) => {
+                                const id = uuidv4();
+                                img.set({
+                                    left: canvasX,
+                                    top: currentY,
+                                    id: id,
+                                    type: 'image'
+                                });
+                                canvas.add(img);
+                                currentY += img.height + 20; // Add gap
+                                resolve();
+                            });
+                        });
+                    }
+                    canvas.renderAll();
+                } else if (data.url) {
+                    // Single image
+                    fabric.Image.fromURL(data.url, (img) => {
+                        const id = uuidv4();
+                        img.set({
+                            left: canvasX,
+                            top: canvasY,
+                            id: id,
+                            type: 'image'
+                        });
+                        canvas.add(img);
+                        canvas.setActiveObject(img);
                     });
-                    canvas.add(img);
-                    canvas.setActiveObject(img);
-                });
+                }
 
             } catch (err) {
                 console.error("Upload failed", err);
