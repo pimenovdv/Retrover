@@ -201,6 +201,39 @@ def test_upload_image_invalid():
         resp = client.post("/upload", files=files)
         assert resp.status_code == 400
 
+def test_upload_pdf():
+    with TestClient(app) as client:
+        import fitz
+
+        # the setup_teardown fixture changed os.getcwd() to the temp_dir
+        pdf_path = "test.pdf"
+        doc = fitz.open()
+        page = doc.new_page()
+        page.insert_text((50, 50), "Test", fontsize=20)
+        page2 = doc.new_page()
+        page2.insert_text((50, 50), "Page 2", fontsize=20)
+        doc.save(pdf_path)
+        doc.close()
+
+        with open(pdf_path, "rb") as f:
+            files = {"file": ("test.pdf", f, "application/pdf")}
+            response = client.post("/upload", files=files)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "urls" in data
+        assert len(data["urls"]) == 2
+        for url in data["urls"]:
+            assert url.startswith("/uploads/")
+            assert url.endswith(".png")
+
+def test_upload_pdf_invalid():
+    with TestClient(app) as client:
+        files = {"file": ("test.pdf", b"This is not a real PDF file", "application/pdf")}
+        resp = client.post("/upload", files=files)
+        assert resp.status_code == 400
+        assert "Invalid or corrupted PDF file" in resp.json()["detail"]
+
 @pytest.mark.asyncio
 async def test_db_batcher_add_add():
     from src.main import db_batcher

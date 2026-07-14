@@ -506,7 +506,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         async function uploadAndAddImage(file, x, y, isCanvasCoords=false) {
-            if (!file.type.startsWith('image/')) return;
+            if (!file.type.startsWith('image/') && file.type !== 'application/pdf') return;
 
             const formData = new FormData();
             formData.append("file", file);
@@ -527,17 +527,42 @@ document.addEventListener("DOMContentLoaded", () => {
                     canvasY = pointer.y;
                 }
 
-                fabric.Image.fromURL(data.url, (img) => {
-                    const id = uuidv4();
-                    img.set({
-                        left: canvasX,
-                        top: canvasY,
-                        id: id,
-                        type: 'image'
+                let urlsToLoad = [];
+                if (data.urls) {
+                    urlsToLoad = data.urls;
+                } else if (data.url) {
+                    urlsToLoad = [data.url];
+                }
+
+                let currentY = canvasY;
+
+                for (const url of urlsToLoad) {
+                    await new Promise((resolve) => {
+                        fabric.Image.fromURL(url, (img) => {
+                            const id = uuidv4();
+                            img.set({
+                                id: id,
+                                left: canvasX,
+                                top: currentY,
+                                originX: 'center',
+                                originY: 'center',
+                                z_index: getMaxZIndex() + 1
+                            });
+
+                            // Optional: scale down if image is too large
+                            if (img.width > 1000) {
+                                img.scaleToWidth(1000);
+                            }
+
+                            canvas.add(img);
+                            saveState('add', img);
+
+                            // Move Y down for the next page if there is one
+                            currentY += (img.height * img.scaleY) + 20; // 20px padding
+                            resolve();
+                        }, { crossOrigin: 'anonymous' });
                     });
-                    canvas.add(img);
-                    canvas.setActiveObject(img);
-                });
+                }
 
             } catch (err) {
                 console.error("Upload failed", err);
