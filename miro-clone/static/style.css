@@ -281,9 +281,46 @@ body, html {
         right: 10px;
     }
 
+
+    #minimap-container {
+        width: 120px;
+        height: 90px;
+        bottom: 10px;
+        left: 10px;
+    }
+
     .modal-content {
         width: 90%;
         padding: 20px;
         box-sizing: border-box;
     }
+}
+
+/* Minimap */
+#minimap-container {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    width: 200px;
+    height: 150px;
+    background: #f9f9f9;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    overflow: hidden;
+    z-index: 100;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+#minimap {
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+#minimap-viewport {
+    position: absolute;
+    border: 2px solid rgba(0, 123, 255, 0.8);
+    background: rgba(0, 123, 255, 0.2);
+    pointer-events: none;
+    box-sizing: border-box;
 }
