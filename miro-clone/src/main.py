@@ -301,12 +301,34 @@ async def upload_image(file: UploadFile = File(...)):
     if ext not in ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf']:
         raise HTTPException(status_code=400, detail="Invalid file extension.")
 
-    filename = f"{uuid.uuid4()}.{ext}"
-    filepath = os.path.join("uploads", filename)
+    content = await file.read()
 
-    async with aiofiles.open(filepath, 'wb') as out_file:
-        content = await file.read()
-        await out_file.write(content)
+    if file.content_type == "application/pdf":
+        try:
+            pdf_document = fitz.open(stream=content, filetype="pdf")
+        except Exception as e:
+            raise HTTPException(status_code=400, detail="Invalid or corrupted PDF file.")
+
+        urls = []
+        for page_num in range(len(pdf_document)):
+            page = pdf_document.load_page(page_num)
+            pix = page.get_pixmap()
+
+            filename = f"{uuid.uuid4()}.png"
+            filepath = os.path.join("uploads", filename)
+
+            pix.save(filepath)
+
+            urls.append(f"/uploads/{filename}")
+
+        pdf_document.close()
+        return {"urls": urls}
+    else:
+        filename = f"{uuid.uuid4()}.{ext}"
+        filepath = os.path.join("uploads", filename)
+
+        async with aiofiles.open(filepath, 'wb') as out_file:
+            await out_file.write(content)
 
     if ext == 'pdf':
         urls = []

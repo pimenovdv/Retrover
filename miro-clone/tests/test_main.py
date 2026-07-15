@@ -386,6 +386,43 @@ async def test_upload_invalid_type_endpoint():
         os.remove(test_file_path)
 
 @pytest.mark.asyncio
+async def test_upload_pdf_endpoint():
+    os.environ["TESTING"] = "1"
+    with TestClient(app) as client:
+        import fitz
+        test_file_path = "test_doc.pdf"
+        doc = fitz.open()
+        page = doc.new_page()
+        page.insert_text((50, 50), "Test PDF Content", fontsize=20)
+        doc.save(test_file_path)
+        doc.close()
+
+        with open(test_file_path, "rb") as f:
+            response = client.post("/upload", files={"file": ("test_doc.pdf", f, "application/pdf")})
+            assert response.status_code == 200
+            data = response.json()
+            assert "urls" in data
+            assert len(data["urls"]) == 1
+            assert data["urls"][0].startswith("/uploads/")
+
+        os.remove(test_file_path)
+
+@pytest.mark.asyncio
+async def test_upload_corrupted_pdf_endpoint():
+    os.environ["TESTING"] = "1"
+    with TestClient(app) as client:
+        test_file_path = "corrupted_doc.pdf"
+        with open(test_file_path, "wb") as f:
+            f.write(b"Not a valid PDF file content")
+
+        with open(test_file_path, "rb") as f:
+            response = client.post("/upload", files={"file": ("corrupted_doc.pdf", f, "application/pdf")})
+            assert response.status_code == 400
+            assert "Invalid or corrupted PDF file" in response.json()["detail"]
+
+        os.remove(test_file_path)
+
+@pytest.mark.asyncio
 async def test_upload_invalid_extension():
     os.environ["TESTING"] = "1"
     with TestClient(app) as client:
