@@ -113,6 +113,8 @@ document.addEventListener("DOMContentLoaded", () => {
             loginModal.style.display = "none";
             toolbar.style.display = "flex";
             canvasContainer.style.display = "block";
+        document.getElementById("minimap-container").style.display = "block";
+
             document.getElementById("chat-panel").style.display = "flex";
             initApp();
         }
@@ -128,6 +130,165 @@ document.addEventListener("DOMContentLoaded", () => {
         window.canvas = canvas;
 
         // Resize handling
+
+    // --- Minimap Logic ---
+    const minimapCanvas = document.getElementById('minimap');
+    const minimapViewport = document.getElementById('minimap-viewport');
+    const minimapContainer = document.getElementById('minimap-container');
+    let minimapCtx = minimapCanvas.getContext('2d');
+
+    function getCanvasBounds() {
+        let minX = 0, minY = 0, maxX = canvas.getWidth(), maxY = canvas.getHeight();
+        const objects = canvas.getObjects();
+        if (objects.length > 0) {
+            let first = true;
+            objects.forEach(obj => {
+                // Ignore cursor objects and similar non-drawing stuff if needed
+                const br = obj.getBoundingRect();
+                if (first) {
+                    minX = br.left;
+                    minY = br.top;
+                    maxX = br.left + br.width;
+                    maxY = br.top + br.height;
+                    first = false;
+                } else {
+                    minX = Math.min(minX, br.left);
+                    minY = Math.min(minY, br.top);
+                    maxX = Math.max(maxX, br.left + br.width);
+                    maxY = Math.max(maxY, br.top + br.height);
+                }
+            });
+            // Add padding
+            minX -= 100; minY -= 100; maxX += 100; maxY += 100;
+        }
+        return { minX, minY, maxX, maxY, width: maxX - minX, height: maxY - minY };
+    }
+
+    let minimapScale = 1;
+    let minimapOffsetX = 0;
+    let minimapOffsetY = 0;
+    let minimapBounds = { minX: 0, minY: 0 };
+
+    function updateMinimap() {
+        if (!minimapCanvas || !canvas) return;
+
+        minimapCtx.clearRect(0, 0, minimapCanvas.width, minimapCanvas.height);
+
+        const bounds = getCanvasBounds();
+        minimapBounds = bounds;
+
+        // Scale to fit bounds in minimap
+        const scale = Math.min(minimapCanvas.width / bounds.width, minimapCanvas.height / bounds.height);
+        minimapScale = scale;
+
+        const offsetX = (minimapCanvas.width - bounds.width * scale) / 2;
+        const offsetY = (minimapCanvas.height - bounds.height * scale) / 2;
+        minimapOffsetX = offsetX;
+        minimapOffsetY = offsetY;
+
+        minimapCtx.save();
+        minimapCtx.translate(offsetX, offsetY);
+        minimapCtx.scale(scale, scale);
+        minimapCtx.translate(-bounds.minX, -bounds.minY);
+
+        // Render all objects to minimap
+        // Draw all objects correctly handling selections
+        const activeObj = canvas.getActiveObject();
+        canvas.getObjects().forEach(obj => {
+            if (obj.visible !== false && (!activeObj || activeObj.type !== 'activeSelection' || !activeObj.contains(obj))) {
+                 obj.render(minimapCtx);
+            }
+        });
+
+        // Render active selection group if it exists
+        if (activeObj && activeObj.type === 'activeSelection') {
+             activeObj.render(minimapCtx);
+        }
+
+        minimapCtx.restore();
+
+        // Calculate viewport indicator box
+        const zoom = canvas.getZoom();
+        const vpt = canvas.viewportTransform;
+        const viewLeft = -vpt[4] / zoom;
+        const viewTop = -vpt[5] / zoom;
+        const viewWidth = canvas.getWidth() / zoom;
+        const viewHeight = canvas.getHeight() / zoom;
+
+        const mapLeft = offsetX + (viewLeft - bounds.minX) * scale;
+        const mapTop = offsetY + (viewTop - bounds.minY) * scale;
+        const mapWidth = viewWidth * scale;
+        const mapHeight = viewHeight * scale;
+
+        minimapViewport.style.left = `${mapLeft}px`;
+        minimapViewport.style.top = `${mapTop}px`;
+        minimapViewport.style.width = `${mapWidth}px`;
+        minimapViewport.style.height = `${mapHeight}px`;
+    }
+
+    let isDraggingMinimap = false;
+
+    function handleMinimapEvent(e) {
+        if (!isDraggingMinimap && e.type !== 'mousedown' && e.type !== 'touchstart') return;
+
+        const rect = minimapContainer.getBoundingClientRect();
+        let x, y;
+
+        if (e.touches && e.touches.length > 0) {
+            x = e.touches[0].clientX - rect.left;
+            y = e.touches[0].clientY - rect.top;
+        } else {
+            x = e.clientX - rect.left;
+            y = e.clientY - rect.top;
+        }
+
+        const absX = (x - minimapOffsetX) / minimapScale + minimapBounds.minX;
+        const absY = (y - minimapOffsetY) / minimapScale + minimapBounds.minY;
+
+        const zoom = canvas.getZoom();
+        const vpt = canvas.viewportTransform;
+
+        // Update viewport to center on clicked position
+        vpt[4] = -(absX * zoom) + (canvas.getWidth() / 2);
+        vpt[5] = -(absY * zoom) + (canvas.getHeight() / 2);
+
+        canvas.requestRenderAll();
+        updateMinimap();
+    }
+
+    minimapContainer.addEventListener('mousedown', (e) => {
+        isDraggingMinimap = true;
+        handleMinimapEvent(e);
+    });
+
+    window.addEventListener('mousemove', (e) => {
+        if (isDraggingMinimap) {
+            handleMinimapEvent(e);
+        }
+    });
+
+    window.addEventListener('mouseup', () => {
+        isDraggingMinimap = false;
+    });
+
+    minimapContainer.addEventListener('touchstart', (e) => {
+        isDraggingMinimap = true;
+        handleMinimapEvent(e);
+        e.preventDefault();
+    }, {passive: false});
+
+    window.addEventListener('touchmove', (e) => {
+        if (isDraggingMinimap) {
+            handleMinimapEvent(e);
+            e.preventDefault();
+        }
+    }, {passive: false});
+
+    window.addEventListener('touchend', () => {
+        isDraggingMinimap = false;
+    });
+    // --- End Minimap Logic ---
+
         window.addEventListener('resize', () => {
             canvas.setWidth(window.innerWidth);
             canvas.setHeight(window.innerHeight);
@@ -135,6 +296,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         // Infinite Canvas: Zoom
+        canvas.on('after:render', updateMinimap);
         canvas.on('mouse:wheel', function(opt) {
             var delta = opt.e.deltaY;
             var zoom = canvas.getZoom();
