@@ -121,6 +121,13 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     function initApp() {
+
+    function getMaxZIndex() {
+        const objects = window.canvas ? window.canvas.getObjects() : [];
+        if (objects.length === 0) return 0;
+        return Math.max(...objects.map(o => o.z_index || 0));
+    }
+
         // Init Fabric Canvas
         canvas = new fabric.Canvas('canvas', {
             width: window.innerWidth,
@@ -731,8 +738,92 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
 
+
+        let clipboard = null;
+
+        function copy() {
+            if (canvas.getActiveObject()) {
+                // Ignore if we are currently editing text
+                if (canvas.getActiveObject().isEditing) return;
+
+                canvas.getActiveObject().clone((cloned) => {
+                    clipboard = cloned;
+                });
+            }
+        }
+
+        function paste() {
+            if (!clipboard) return;
+            // Ignore if we are currently editing text
+            if (canvas.getActiveObject() && canvas.getActiveObject().isEditing) return;
+
+            clipboard.clone((clonedObj) => {
+                canvas.discardActiveObject();
+                clonedObj.set({
+                    left: clonedObj.left + 10,
+                    top: clonedObj.top + 10,
+                    evented: true
+                });
+
+                if (clonedObj.type === 'activeSelection') {
+                    clonedObj.canvas = canvas;
+                    clonedObj.forEachObject((obj) => {
+                        obj.set({
+                            id: uuidv4(),
+                            z_index: getMaxZIndex() + 1
+                        });
+                        canvas.add(obj);
+
+                        const matrix = obj.calcTransformMatrix();
+                        const point = fabric.util.qrDecompose(matrix);
+
+                        const objData = obj.toObject(['id', 'z_index']);
+                        // Overwrite with absolute coordinates for websocket
+                        objData.left = point.translateX;
+                        objData.top = point.translateY;
+                        objData.scaleX = point.scaleX;
+                        objData.scaleY = point.scaleY;
+                        objData.angle = point.angle;
+
+                        pushHistory('add', null, objData);
+                        ws.send(JSON.stringify({
+                            action: 'add',
+                            object: objData
+                        }));
+                    });
+                    clonedObj.setCoords();
+                    canvas.setActiveObject(clonedObj);
+                } else {
+                    clonedObj.set({
+                        id: uuidv4(),
+                        z_index: getMaxZIndex() + 1
+                    });
+                    canvas.add(clonedObj);
+                    const objData = clonedObj.toObject(['id', 'z_index']);
+                    pushHistory('add', null, objData);
+                    ws.send(JSON.stringify({
+                        action: 'add',
+                        object: objData
+                    }));
+                    canvas.setActiveObject(clonedObj);
+                }
+
+                clipboard.top += 10;
+                clipboard.left += 10;
+                canvas.requestRenderAll();
+            });
+        }
+
         window.addEventListener('keydown', (e) => {
-             if (e.key === 'Delete' || e.key === 'Backspace') {
+             if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
+                 if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
+                 copy();
+                 e.preventDefault();
+             } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
+                 if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
+                 paste();
+                 e.preventDefault();
+             } else if (e.key === 'Delete' || e.key === 'Backspace') {
                  // Check if we are editing text, if so don't delete the whole object
                  if (canvas.getActiveObject() && canvas.getActiveObject().isEditing) {
                      return;
