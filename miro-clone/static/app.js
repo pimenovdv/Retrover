@@ -348,6 +348,26 @@ document.addEventListener("DOMContentLoaded", () => {
             canvas.selection = true;
         });
 
+        // Grid Snapping
+        const chkGridSnap = document.getElementById("chk-grid-snap");
+        let gridSnapEnabled = chkGridSnap ? chkGridSnap.checked : false;
+        const GRID_SIZE = 20;
+
+        if (chkGridSnap) {
+            chkGridSnap.addEventListener('change', (e) => {
+                gridSnapEnabled = e.target.checked;
+            });
+        }
+
+        canvas.on('object:moving', function(options) {
+            if (!gridSnapEnabled) return;
+            const target = options.target;
+            target.set({
+                left: Math.round(target.left / GRID_SIZE) * GRID_SIZE,
+                top: Math.round(target.top / GRID_SIZE) * GRID_SIZE
+            });
+        });
+
 
         // Connect WebSocket
         const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";

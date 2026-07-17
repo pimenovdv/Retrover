@@ -8,5 +8,5 @@
 
 ## To-Do
 - [x] Add copy/paste support for canvas elements using keyboard shortcuts.
-- [ ] Add grid snapping for precise alignment of shapes.
+- [x] Add grid snapping for precise alignment of shapes.
 - [ ] Implement an eraser tool for drawing mode.
