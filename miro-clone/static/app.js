@@ -503,16 +503,48 @@ document.addEventListener("DOMContentLoaded", () => {
              canvas.setActiveObject(poly);
         });
 
+        window.isErasing = false;
         const btnFreehand = document.getElementById("btn-freehand");
+        const btnEraser = document.getElementById("btn-eraser");
+
         btnFreehand.addEventListener("click", () => {
-             canvas.isDrawingMode = !canvas.isDrawingMode;
-             btnFreehand.style.backgroundColor = canvas.isDrawingMode ? '#ccc' : '#f0f0f0';
+             if (window.isErasing) {
+                 window.isErasing = false;
+                 btnEraser.style.backgroundColor = '#f0f0f0';
+                 // we are still in drawing mode, just turned off eraser
+                 btnFreehand.style.backgroundColor = '#ccc';
+             } else {
+                 // toggle drawing mode
+                 canvas.isDrawingMode = !canvas.isDrawingMode;
+                 btnFreehand.style.backgroundColor = canvas.isDrawingMode ? '#ccc' : '#f0f0f0';
+             }
+        });
+
+        btnEraser.addEventListener("click", () => {
+             if (canvas.isDrawingMode && !window.isErasing) {
+                 // already in drawing mode, just toggle erasing
+                 window.isErasing = true;
+                 btnFreehand.style.backgroundColor = '#f0f0f0';
+                 btnEraser.style.backgroundColor = '#ccc';
+             } else {
+                 // toggle drawing mode (and erasing)
+                 canvas.isDrawingMode = !canvas.isDrawingMode;
+                 window.isErasing = canvas.isDrawingMode;
+                 btnFreehand.style.backgroundColor = '#f0f0f0';
+                 btnEraser.style.backgroundColor = canvas.isDrawingMode ? '#ccc' : '#f0f0f0';
+             }
         });
 
         // Add ID to freehand paths
         canvas.on('path:created', (e) => {
              const path = e.path;
              path.set({ id: uuidv4() });
+             if (window.isErasing) {
+                 path.globalCompositeOperation = 'destination-out';
+                 path.stroke = 'rgba(0,0,0,1)';
+                 // Fabric.js needs to be notified that this path is modified to render properly
+                 canvas.requestRenderAll();
+             }
              // object:added will fire shortly after this and handle the actual broadcast.
         });
 
@@ -529,7 +561,7 @@ document.addEventListener("DOMContentLoaded", () => {
              group.getObjects().forEach(obj => {
                  ws.send(JSON.stringify({ action: 'remove', object: { id: obj.id } }));
              });
-             ws.send(JSON.stringify({ action: 'add', object: group.toObject(['id', 'z_index']) }));
+             ws.send(JSON.stringify({ action: 'add', object: group.toObject(['id', 'z_index', 'globalCompositeOperation']) }));
 
              canvas.requestRenderAll();
         });
@@ -550,7 +582,7 @@ document.addEventListener("DOMContentLoaded", () => {
              activeSelection.getObjects().forEach(obj => {
                  if (!obj.id) obj.id = uuidv4();
                  // Now obj.left / obj.top are absolute coordinates
-                 ws.send(JSON.stringify({ action: 'add', object: obj.toObject(['id', 'z_index']) }));
+                 ws.send(JSON.stringify({ action: 'add', object: obj.toObject(['id', 'z_index', 'globalCompositeOperation']) }));
              });
 
              canvas.requestRenderAll();
@@ -597,7 +629,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const obj = e.target;
             if (!obj.id) obj.id = uuidv4(); // fallback
 
-            const objData = obj.toObject(['id', 'z_index']);
+            const objData = obj.toObject(['id', 'z_index', 'globalCompositeOperation']);
             pushHistory('add', null, objData);
 
             ws.send(JSON.stringify({
@@ -608,10 +640,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
         canvas.on('mouse:down', (e) => {
             if (e.target && e.target.type !== 'activeSelection') {
-                e.target._originalState = e.target.toObject(['id', 'z_index']);
+                e.target._originalState = e.target.toObject(['id', 'z_index', 'globalCompositeOperation']);
             } else if (e.target && e.target.type === 'activeSelection') {
                 e.target.getObjects().forEach(o => {
-                    o._originalState = o.toObject(['id', 'z_index']);
+                    o._originalState = o.toObject(['id', 'z_index', 'globalCompositeOperation']);
                 });
             }
         });
@@ -650,7 +682,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     }));
                 });
             } else {
-                const newState = obj.toObject(['id', 'z_index']);
+                const newState = obj.toObject(['id', 'z_index', 'globalCompositeOperation']);
                 if (obj._originalState) {
                     pushHistory('modify', obj._originalState, newState);
                     obj._originalState = null;
@@ -797,7 +829,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         const matrix = obj.calcTransformMatrix();
                         const point = fabric.util.qrDecompose(matrix);
 
-                        const objData = obj.toObject(['id', 'z_index']);
+                        const objData = obj.toObject(['id', 'z_index', 'globalCompositeOperation']);
                         // Overwrite with absolute coordinates for websocket
                         objData.left = point.translateX;
                         objData.top = point.translateY;
@@ -819,7 +851,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         z_index: getMaxZIndex() + 1
                     });
                     canvas.add(clonedObj);
-                    const objData = clonedObj.toObject(['id', 'z_index']);
+                    const objData = clonedObj.toObject(['id', 'z_index', 'globalCompositeOperation']);
                     pushHistory('add', null, objData);
                     ws.send(JSON.stringify({
                         action: 'add',
@@ -854,7 +886,7 @@ document.addEventListener("DOMContentLoaded", () => {
                      const removedObjects = [];
                      activeObjects.forEach(obj => {
                          if (isProcessingSync) return;
-                         removedObjects.push(obj.toObject(['id', 'z_index']));
+                         removedObjects.push(obj.toObject(['id', 'z_index', 'globalCompositeOperation']));
                          ws.send(JSON.stringify({
                              action: 'remove',
                              object: { id: obj.id }
@@ -1027,14 +1059,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (prop === 'stroke-width') val = parseInt(val, 10);
 
-            const originalState = activeObject.toObject(['id', 'z_index']);
+            const originalState = activeObject.toObject(['id', 'z_index', 'globalCompositeOperation']);
 
             if (prop === 'fill') activeObject.set('fill', val);
             if (prop === 'stroke') activeObject.set('stroke', val);
             if (prop === 'stroke-width') activeObject.set('strokeWidth', val);
             if (prop === 'font-family') activeObject.set('fontFamily', val);
 
-            const newState = activeObject.toObject(['id', 'z_index']);
+            const newState = activeObject.toObject(['id', 'z_index', 'globalCompositeOperation']);
             pushHistory('modify', originalState, newState);
 
             canvas.renderAll();
