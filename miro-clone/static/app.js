@@ -24,7 +24,9 @@ document.addEventListener("DOMContentLoaded", () => {
     let isUndoRedo = false;
     let undoStack = [];
     let redoStack = [];
+    let isEraserMode = false;
 
+    window.isEraserMode = isEraserMode;
     window.undoStack = undoStack;
     window.redoStack = redoStack;
 
@@ -508,6 +510,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const btnEraser = document.getElementById("btn-eraser");
 
         btnFreehand.addEventListener("click", () => {
+
              if (window.isErasing) {
                  window.isErasing = false;
                  btnEraser.style.backgroundColor = '#f0f0f0';
@@ -533,17 +536,20 @@ document.addEventListener("DOMContentLoaded", () => {
                  btnFreehand.style.backgroundColor = '#f0f0f0';
                  btnEraser.style.backgroundColor = canvas.isDrawingMode ? '#ccc' : '#f0f0f0';
              }
+
         });
 
         // Add ID to freehand paths
         canvas.on('path:created', (e) => {
              const path = e.path;
              path.set({ id: uuidv4() });
+
              if (window.isErasing) {
                  path.globalCompositeOperation = 'destination-out';
                  path.stroke = 'rgba(0,0,0,1)';
                  // Fabric.js needs to be notified that this path is modified to render properly
                  canvas.requestRenderAll();
+
              }
              // object:added will fire shortly after this and handle the actual broadcast.
         });
