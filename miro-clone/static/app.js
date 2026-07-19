@@ -24,7 +24,9 @@ document.addEventListener("DOMContentLoaded", () => {
     let isUndoRedo = false;
     let undoStack = [];
     let redoStack = [];
+    let isEraserMode = false;
 
+    window.isEraserMode = isEraserMode;
     window.undoStack = undoStack;
     window.redoStack = redoStack;
 
@@ -504,15 +506,31 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         const btnFreehand = document.getElementById("btn-freehand");
+        const btnEraser = document.getElementById("btn-eraser");
+
         btnFreehand.addEventListener("click", () => {
+             isEraserMode = false;
+             window.isEraserMode = isEraserMode;
              canvas.isDrawingMode = !canvas.isDrawingMode;
              btnFreehand.style.backgroundColor = canvas.isDrawingMode ? '#ccc' : '#f0f0f0';
+             btnEraser.style.backgroundColor = '#f0f0f0';
+        });
+
+        btnEraser.addEventListener("click", () => {
+             isEraserMode = !isEraserMode;
+             window.isEraserMode = isEraserMode;
+             canvas.isDrawingMode = isEraserMode;
+             btnEraser.style.backgroundColor = isEraserMode ? '#ccc' : '#f0f0f0';
+             btnFreehand.style.backgroundColor = '#f0f0f0';
         });
 
         // Add ID to freehand paths
         canvas.on('path:created', (e) => {
              const path = e.path;
              path.set({ id: uuidv4() });
+             if (isEraserMode) {
+                 path.set({ globalCompositeOperation: 'destination-out' });
+             }
              // object:added will fire shortly after this and handle the actual broadcast.
         });
 
@@ -529,7 +547,7 @@ document.addEventListener("DOMContentLoaded", () => {
              group.getObjects().forEach(obj => {
                  ws.send(JSON.stringify({ action: 'remove', object: { id: obj.id } }));
              });
-             ws.send(JSON.stringify({ action: 'add', object: group.toObject(['id', 'z_index']) }));
+             ws.send(JSON.stringify({ action: 'add', object: group.toObject(['id', 'z_index', 'globalCompositeOperation']) }));
 
              canvas.requestRenderAll();
         });
@@ -550,7 +568,7 @@ document.addEventListener("DOMContentLoaded", () => {
              activeSelection.getObjects().forEach(obj => {
                  if (!obj.id) obj.id = uuidv4();
                  // Now obj.left / obj.top are absolute coordinates
-                 ws.send(JSON.stringify({ action: 'add', object: obj.toObject(['id', 'z_index']) }));
+                 ws.send(JSON.stringify({ action: 'add', object: obj.toObject(['id', 'z_index', 'globalCompositeOperation']) }));
              });
 
              canvas.requestRenderAll();
@@ -597,7 +615,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const obj = e.target;
             if (!obj.id) obj.id = uuidv4(); // fallback
 
-            const objData = obj.toObject(['id', 'z_index']);
+            const objData = obj.toObject(['id', 'z_index', 'globalCompositeOperation']);
             pushHistory('add', null, objData);
 
             ws.send(JSON.stringify({
@@ -608,10 +626,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
         canvas.on('mouse:down', (e) => {
             if (e.target && e.target.type !== 'activeSelection') {
-                e.target._originalState = e.target.toObject(['id', 'z_index']);
+                e.target._originalState = e.target.toObject(['id', 'z_index', 'globalCompositeOperation']);
             } else if (e.target && e.target.type === 'activeSelection') {
                 e.target.getObjects().forEach(o => {
-                    o._originalState = o.toObject(['id', 'z_index']);
+                    o._originalState = o.toObject(['id', 'z_index', 'globalCompositeOperation']);
                 });
             }
         });
@@ -650,7 +668,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     }));
                 });
             } else {
-                const newState = obj.toObject(['id', 'z_index']);
+                const newState = obj.toObject(['id', 'z_index', 'globalCompositeOperation']);
                 if (obj._originalState) {
                     pushHistory('modify', obj._originalState, newState);
                     obj._originalState = null;
@@ -797,7 +815,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         const matrix = obj.calcTransformMatrix();
                         const point = fabric.util.qrDecompose(matrix);
 
-                        const objData = obj.toObject(['id', 'z_index']);
+                        const objData = obj.toObject(['id', 'z_index', 'globalCompositeOperation']);
                         // Overwrite with absolute coordinates for websocket
                         objData.left = point.translateX;
                         objData.top = point.translateY;
@@ -819,7 +837,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         z_index: getMaxZIndex() + 1
                     });
                     canvas.add(clonedObj);
-                    const objData = clonedObj.toObject(['id', 'z_index']);
+                    const objData = clonedObj.toObject(['id', 'z_index', 'globalCompositeOperation']);
                     pushHistory('add', null, objData);
                     ws.send(JSON.stringify({
                         action: 'add',
@@ -854,7 +872,7 @@ document.addEventListener("DOMContentLoaded", () => {
                      const removedObjects = [];
                      activeObjects.forEach(obj => {
                          if (isProcessingSync) return;
-                         removedObjects.push(obj.toObject(['id', 'z_index']));
+                         removedObjects.push(obj.toObject(['id', 'z_index', 'globalCompositeOperation']));
                          ws.send(JSON.stringify({
                              action: 'remove',
                              object: { id: obj.id }
@@ -1027,14 +1045,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (prop === 'stroke-width') val = parseInt(val, 10);
 
-            const originalState = activeObject.toObject(['id', 'z_index']);
+            const originalState = activeObject.toObject(['id', 'z_index', 'globalCompositeOperation']);
 
             if (prop === 'fill') activeObject.set('fill', val);
             if (prop === 'stroke') activeObject.set('stroke', val);
             if (prop === 'stroke-width') activeObject.set('strokeWidth', val);
             if (prop === 'font-family') activeObject.set('fontFamily', val);
 
-            const newState = activeObject.toObject(['id', 'z_index']);
+            const newState = activeObject.toObject(['id', 'z_index', 'globalCompositeOperation']);
             pushHistory('modify', originalState, newState);
 
             canvas.renderAll();
