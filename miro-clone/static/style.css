@@ -23,6 +23,9 @@ body, html {
     border-radius: 8px;
     box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 95%;
     gap: 8px;
     align-items: center;
 }

@@ -439,6 +439,45 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
 
+        document.getElementById("btn-sticky").addEventListener("click", () => {
+            const id = uuidv4();
+            const rect = new fabric.Rect({
+                left: 0,
+                top: 0,
+                width: 150,
+                height: 150,
+                fill: '#FFFF88', // Light yellow
+                rx: 5,
+                ry: 5,
+                shadow: new fabric.Shadow({
+                    color: 'rgba(0,0,0,0.3)',
+                    blur: 5,
+                    offsetX: 2,
+                    offsetY: 2
+                })
+            });
+            const text = new fabric.IText('Sticky Note', {
+                left: 75,
+                top: 75,
+                fontSize: 20,
+                fill: '#333333',
+                fontFamily: 'Arial',
+                originX: 'center',
+                originY: 'center',
+                textAlign: 'center'
+            });
+
+            const group = new fabric.Group([rect, text], {
+                left: 300,
+                top: 300,
+                id: id
+            });
+
+            canvas.add(group);
+            canvas.setActiveObject(group);
+            updatePropertiesPanel();
+        });
+
         document.getElementById("btn-line").addEventListener("click", () => {
             const id = uuidv4();
             const vpt = canvas.viewportTransform;
