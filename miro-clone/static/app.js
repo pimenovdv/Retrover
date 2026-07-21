@@ -939,6 +939,19 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("btn-redo").addEventListener("click", () => {
             performRedo();
         });
+
+        document.getElementById("btn-export").addEventListener("click", () => {
+            const dataURL = canvas.toDataURL({
+                format: 'png',
+                quality: 1
+            });
+            const link = document.createElement('a');
+            link.download = `board-${boardId}-export.png`;
+            link.href = dataURL;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
     }
 
     function addShapeToCanvas(shapeData) {
