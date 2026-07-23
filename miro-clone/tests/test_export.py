@@ -2,7 +2,6 @@ import os
 import pytest
 import uvicorn
 import threading
-from playwright.sync_api import sync_playwright
 
 os.environ["TESTING"] = "1"
 
@@ -23,6 +22,7 @@ def server():
 
 @pytest.mark.skipif(os.environ.get('CI') == 'true', reason="Skipping UI tests in CI")
 def test_export_image(server):
+    from playwright.sync_api import sync_playwright
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
