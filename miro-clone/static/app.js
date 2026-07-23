@@ -1092,7 +1092,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    [propFill, propStroke, propStrokeWidth, propFontFamily, propAngle].forEach(input => {
+    [propFill, propStroke, propStrokeWidth, propFontFamily].forEach(input => {
         input.addEventListener('change', (e) => {
             const activeObject = canvas.getActiveObject();
             if (!activeObject) return;
@@ -1101,7 +1101,6 @@ document.addEventListener("DOMContentLoaded", () => {
             let val = e.target.value;
 
             if (prop === 'stroke-width') val = parseInt(val, 10);
-            if (prop === 'angle') val = parseFloat(val);
 
             const originalState = activeObject.toObject(['id', 'z_index', 'globalCompositeOperation']);
 
@@ -1109,9 +1108,6 @@ document.addEventListener("DOMContentLoaded", () => {
             if (prop === 'stroke') activeObject.set('stroke', val);
             if (prop === 'stroke-width') activeObject.set('strokeWidth', val);
             if (prop === 'font-family') activeObject.set('fontFamily', val);
-            if (prop === 'angle') {
-                activeObject.set('angle', val).setCoords();
-            }
 
             const newState = activeObject.toObject(['id', 'z_index', 'globalCompositeOperation']);
             pushHistory('modify', originalState, newState);
