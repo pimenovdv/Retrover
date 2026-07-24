@@ -6,11 +6,6 @@ import time
 # Set TESTING to use fakeredis and avoid production DB leaks
 os.environ["TESTING"] = "1"
 
-try:
-    from playwright.sync_api import sync_playwright, expect
-except ImportError:
-    pass
-
 @pytest.fixture(scope="module")
 def app_server():
     """Runs the FastAPI server in a background thread."""
@@ -34,6 +29,7 @@ def app_server():
 
 @pytest.mark.skipif(os.environ.get('CI') == 'true', reason="Skipping UI tests in CI")
 def test_eraser_tool(app_server):
+    from playwright.sync_api import sync_playwright, expect
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()

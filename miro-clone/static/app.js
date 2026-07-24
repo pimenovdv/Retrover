@@ -370,6 +370,9 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         });
 
+        canvas.on('object:rotating', function(e) {
+            updatePropertiesPanel();
+        });
 
         // Connect WebSocket
         const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
@@ -1064,6 +1067,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const propStroke = document.getElementById("prop-stroke");
     const propStrokeWidth = document.getElementById("prop-stroke-width");
     const propFontFamily = document.getElementById("prop-font-family");
+    const propAngle = document.getElementById("prop-angle");
 
     window.updatePropertiesPanel = function updatePropertiesPanel() {
         const activeObject = canvas.getActiveObject();
@@ -1078,6 +1082,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (activeObject.fill) propFill.value = activeObject.fill;
         if (activeObject.stroke) propStroke.value = activeObject.stroke;
         if (activeObject.strokeWidth !== undefined) propStrokeWidth.value = activeObject.strokeWidth;
+        if (activeObject.angle !== undefined) propAngle.value = Math.round(activeObject.angle);
 
         if (activeObject.type === 'i-text' || activeObject.type === 'text') {
             propFontFamily.parentElement.style.display = 'flex';
@@ -1174,8 +1179,13 @@ function handleSelection(opt) {
 
         propFontFamily.addEventListener('change', (e) => applyPropertyChange('fontFamily', e.target.value));
 
-        propFontSize.addEventListener('input', (e) => applyPropertyChange('fontSize', e.target.value));
-        propFontSize.addEventListener('change', (e) => applyPropertyChange('fontSize', e.target.value));
+        if (typeof propFontSize !== 'undefined') {
+            propFontSize.addEventListener('input', (e) => applyPropertyChange('fontSize', e.target.value));
+            propFontSize.addEventListener('change', (e) => applyPropertyChange('fontSize', e.target.value));
+        }
+
+        propAngle.addEventListener('input', (e) => applyPropertyChange('angle', parseFloat(e.target.value)));
+        propAngle.addEventListener('change', (e) => applyPropertyChange('angle', parseFloat(e.target.value)));
 
     function handleRemoteUpdate(action, objData, sender) {
         if (action === "disconnect") {

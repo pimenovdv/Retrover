@@ -2,7 +2,6 @@ import asyncio
 import os
 import threading
 import pytest
-from playwright.sync_api import sync_playwright
 import uvicorn
 import time
 
@@ -31,6 +30,7 @@ def server():
 
 @pytest.mark.skipif(os.environ.get('CI') == 'true', reason="Skipping UI tests in CI due to missing browser dependencies.")
 def test_minimap(server):
+    from playwright.sync_api import sync_playwright
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
