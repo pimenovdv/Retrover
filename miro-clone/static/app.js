@@ -589,7 +589,7 @@ document.addEventListener("DOMContentLoaded", () => {
              group.getObjects().forEach(obj => {
                  ws.send(JSON.stringify({ action: 'remove', object: { id: obj.id } }));
              });
-             ws.send(JSON.stringify({ action: 'add', object: group.toObject(['id', 'z_index', 'globalCompositeOperation']) }));
+             ws.send(JSON.stringify({ action: 'add', object: group.toObject(['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background']) }));
 
              canvas.requestRenderAll();
         });
@@ -610,12 +610,100 @@ document.addEventListener("DOMContentLoaded", () => {
              activeSelection.getObjects().forEach(obj => {
                  if (!obj.id) obj.id = uuidv4();
                  // Now obj.left / obj.top are absolute coordinates
-                 ws.send(JSON.stringify({ action: 'add', object: obj.toObject(['id', 'z_index', 'globalCompositeOperation']) }));
+                 ws.send(JSON.stringify({ action: 'add', object: obj.toObject(['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background']) }));
              });
 
              canvas.requestRenderAll();
         });
 
+
+        const bgUploadInput = document.getElementById("bg-upload-input");
+
+        document.getElementById("btn-set-bg").addEventListener("click", () => {
+             bgUploadInput.click();
+        });
+
+        bgUploadInput.addEventListener("change", async (e) => {
+             if (e.target.files && e.target.files.length > 0) {
+                 const file = e.target.files[0];
+
+                 const formData = new FormData();
+                 formData.append("file", file);
+
+                 try {
+                     const response = await fetch('/upload', {
+                         method: 'POST',
+                         body: formData
+                     });
+                     const data = await response.json();
+
+                     let urlsToLoad = [];
+                     if (data.urls) {
+                         urlsToLoad = data.urls;
+                     } else if (data.url) {
+                         urlsToLoad = [data.url];
+                     }
+
+                     if (urlsToLoad.length > 0) {
+                         // We will only use the first image as background
+                         const url = urlsToLoad[0];
+
+                         fabric.Image.fromURL(url, (img) => {
+                             // Remove existing background
+                             const objects = canvas.getObjects();
+                             const existingBgs = objects.filter(o => o.is_background === true);
+                             existingBgs.forEach(bg => {
+                                 canvas.remove(bg);
+                                 ws.send(JSON.stringify({ action: 'remove', object: { id: bg.id } }));
+                             });
+
+                             const id = uuidv4();
+                             img.set({
+                                 id: id,
+                                 left: 0,
+                                 top: 0,
+                                 originX: 'center',
+                                 originY: 'center',
+                                 z_index: -9999,
+                                 selectable: false,
+                                 evented: false,
+                                 is_background: true
+                             });
+
+                             canvas.add(img);
+                             canvas.sendToBack(img);
+
+                             const objData = img.toObject(['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background']);
+                             pushHistory('add', null, objData);
+
+                             ws.send(JSON.stringify({
+                                 action: 'add',
+                                 object: objData
+                             }));
+                         }, { crossOrigin: 'anonymous' });
+                     }
+                 } catch (err) {
+                     console.error("Upload failed", err);
+                 }
+             }
+             e.target.value = ""; // Reset input
+        });
+
+        document.getElementById("btn-clear-bg").addEventListener("click", () => {
+             const objects = canvas.getObjects();
+             const existingBgs = objects.filter(o => o.is_background === true);
+
+             if (existingBgs.length > 0) {
+                 const removedObjects = [];
+                 existingBgs.forEach(bg => {
+                     removedObjects.push(bg.toObject(['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background']));
+                     canvas.remove(bg);
+                     ws.send(JSON.stringify({ action: 'remove', object: { id: bg.id } }));
+                 });
+                 pushHistory('remove', removedObjects, null);
+                 canvas.requestRenderAll();
+             }
+        });
 
         document.getElementById("btn-front").addEventListener("click", () => {
              const activeObject = canvas.getActiveObject();
@@ -657,7 +745,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const obj = e.target;
             if (!obj.id) obj.id = uuidv4(); // fallback
 
-            const objData = obj.toObject(['id', 'z_index', 'globalCompositeOperation']);
+            const objData = obj.toObject(['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background']);
             pushHistory('add', null, objData);
 
             ws.send(JSON.stringify({
@@ -668,10 +756,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
         canvas.on('mouse:down', (e) => {
             if (e.target && e.target.type !== 'activeSelection') {
-                e.target._originalState = e.target.toObject(['id', 'z_index', 'globalCompositeOperation']);
+                e.target._originalState = e.target.toObject(['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background']);
             } else if (e.target && e.target.type === 'activeSelection') {
                 e.target.getObjects().forEach(o => {
-                    o._originalState = o.toObject(['id', 'z_index', 'globalCompositeOperation']);
+                    o._originalState = o.toObject(['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background']);
                 });
             }
         });
@@ -710,7 +798,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     }));
                 });
             } else {
-                const newState = obj.toObject(['id', 'z_index', 'globalCompositeOperation']);
+                const newState = obj.toObject(['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background']);
                 if (obj._originalState) {
                     pushHistory('modify', obj._originalState, newState);
                     obj._originalState = null;
@@ -804,7 +892,13 @@ document.addEventListener("DOMContentLoaded", () => {
                             }
 
                             canvas.add(img);
-                            saveState('add', img);
+
+                            const objData = img.toObject(['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background']);
+                            pushHistory('add', null, objData);
+                            ws.send(JSON.stringify({
+                                action: 'add',
+                                object: objData
+                            }));
 
                             // Move Y down for the next page if there is one
                             currentY += (img.height * img.scaleY) + 20; // 20px padding
@@ -857,7 +951,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         const matrix = obj.calcTransformMatrix();
                         const point = fabric.util.qrDecompose(matrix);
 
-                        const objData = obj.toObject(['id', 'z_index', 'globalCompositeOperation']);
+                        const objData = obj.toObject(['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background']);
                         // Overwrite with absolute coordinates for websocket
                         objData.left = point.translateX;
                         objData.top = point.translateY;
@@ -879,7 +973,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         z_index: getMaxZIndex() + 1
                     });
                     canvas.add(clonedObj);
-                    const objData = clonedObj.toObject(['id', 'z_index', 'globalCompositeOperation']);
+                    const objData = clonedObj.toObject(['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background']);
                     pushHistory('add', null, objData);
                     ws.send(JSON.stringify({
                         action: 'add',
@@ -914,7 +1008,7 @@ document.addEventListener("DOMContentLoaded", () => {
                      const removedObjects = [];
                      activeObjects.forEach(obj => {
                          if (isProcessingSync) return;
-                         removedObjects.push(obj.toObject(['id', 'z_index', 'globalCompositeOperation']));
+                         removedObjects.push(obj.toObject(['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background']));
                          ws.send(JSON.stringify({
                              action: 'remove',
                              object: { id: obj.id }
@@ -964,6 +1058,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
             objects.forEach((obj) => {
                 if (shapeData.z_index !== undefined) obj.z_index = shapeData.z_index;
+                if (shapeData.selectable !== undefined) obj.selectable = shapeData.selectable;
+                if (shapeData.evented !== undefined) obj.evented = shapeData.evented;
+                if (shapeData.is_background !== undefined) obj.is_background = shapeData.is_background;
                 canvas.add(obj);
             });
 
@@ -1102,14 +1199,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (prop === 'stroke-width') val = parseInt(val, 10);
 
-            const originalState = activeObject.toObject(['id', 'z_index', 'globalCompositeOperation']);
+            const originalState = activeObject.toObject(['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background']);
 
             if (prop === 'fill') activeObject.set('fill', val);
             if (prop === 'stroke') activeObject.set('stroke', val);
             if (prop === 'stroke-width') activeObject.set('strokeWidth', val);
             if (prop === 'font-family') activeObject.set('fontFamily', val);
 
-            const newState = activeObject.toObject(['id', 'z_index', 'globalCompositeOperation']);
+            const newState = activeObject.toObject(['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background']);
             pushHistory('modify', originalState, newState);
 
             canvas.renderAll();
