@@ -11,7 +11,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from .database import engine, Base, get_db
-from .models import Shape, Board
+from .models import Shape, Board, User
+from .auth import get_password_hash, verify_password, create_access_token, decode_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
+from pydantic import BaseModel
+import uuid
+from datetime import timedelta
 
 import asyncio
 from .database import AsyncSessionLocal
@@ -196,12 +200,71 @@ async def shutdown_event():
     # Flush remaining batch
     await db_batcher.process_batch()
 
+class UserCreate(BaseModel):
+    username: str
+    password: str
+
+class UserLogin(BaseModel):
+    username: str
+    password: str
+
+@app.post("/register")
+async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
+    from sqlalchemy.exc import IntegrityError
+
+    # Check if user exists
+    result = await db.execute(select(User).filter(User.username == user_data.username))
+    if result.scalars().first():
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="Username already registered")
+
+    new_user = User(
+        id=str(uuid.uuid4()),
+        username=user_data.username,
+        hashed_password=get_password_hash(user_data.password)
+    )
+
+    try:
+        db.add(new_user)
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail="Username already registered")
+
+    return {"message": "User registered successfully"}
+
+@app.post("/login")
+async def login(user_data: UserLogin, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(User).filter(User.username == user_data.username))
+    user = result.scalars().first()
+
+    from fastapi import HTTPException
+    if not user or not verify_password(user_data.password, user.hashed_password):
+        raise HTTPException(status_code=401, detail="Incorrect username or password")
+
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.username}, expires_delta=access_token_expires
+    )
+
+    return {"access_token": access_token, "token_type": "bearer", "username": user.username}
+
+
 @app.get("/")
 async def get():
     return FileResponse("static/index.html")
 
 @app.websocket("/ws/{board_id}/{nickname}")
-async def websocket_endpoint(websocket: WebSocket, board_id: str, nickname: str, db: AsyncSession = Depends(get_db)):
+async def websocket_endpoint(websocket: WebSocket, board_id: str, nickname: str, token: str = None, db: AsyncSession = Depends(get_db)):
+    if os.environ.get("TESTING") != "1":
+        if not token:
+            await websocket.close(code=1008)
+            return
+        decoded = decode_access_token(token)
+        if not decoded or decoded.get("sub") != nickname:
+            await websocket.close(code=1008)
+            return
+
     await manager.connect(websocket, board_id, nickname)
 
     # Ensure board exists

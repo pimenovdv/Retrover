@@ -2,6 +2,13 @@ from sqlalchemy import Column, String, Float, Integer, JSON, ForeignKey
 from sqlalchemy.orm import relationship
 from .database import Base
 
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(String, primary_key=True, index=True)
+    username = Column(String, unique=True, index=True, nullable=False)
+    hashed_password = Column(String, nullable=False)
+
 class Board(Base):
     __tablename__ = "boards"
 

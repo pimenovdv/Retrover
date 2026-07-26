@@ -11,13 +11,29 @@
 </head>
 <body>
 
-    <!-- Login Modal -->
-    <div id="login-modal" class="modal">
+    <!-- Auth Modal -->
+    <div id="auth-modal" class="modal">
         <div class="modal-content">
             <h2>Welcome to Miro Clone MVP</h2>
-            <p>Enter a board ID and nickname to join</p>
+            <p>Login or Register to continue</p>
+            <input type="text" id="auth-username" placeholder="Username" />
+            <input type="password" id="auth-password" placeholder="Password" />
+            <div style="display: flex; justify-content: space-between; margin-top: 10px;">
+                <button id="login-btn">Login</button>
+                <button id="register-btn">Register</button>
+            </div>
+            <p id="auth-error" style="color: red; display: none;"></p>
+            <p id="auth-success" style="color: green; display: none;"></p>
+        </div>
+    </div>
+
+    <!-- Login Modal (Join Board) -->
+    <div id="login-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h2>Join Board</h2>
+            <p>Enter a board ID to join</p>
             <input type="text" id="board-id-input" placeholder="Board ID (e.g. default)" value="default" />
-            <input type="text" id="nickname-input" placeholder="Your Nickname" />
+            <input type="text" id="nickname-input" placeholder="Your Nickname" readonly style="background-color: #eee;" />
             <button id="join-btn">Join Board</button>
         </div>
     </div>

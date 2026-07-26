@@ -1,5 +1,13 @@
 document.addEventListener("DOMContentLoaded", () => {
+    const authModal = document.getElementById("auth-modal");
     const loginModal = document.getElementById("login-modal");
+    const authUsernameInput = document.getElementById("auth-username");
+    const authPasswordInput = document.getElementById("auth-password");
+    const authLoginBtn = document.getElementById("login-btn");
+    const authRegisterBtn = document.getElementById("register-btn");
+    const authError = document.getElementById("auth-error");
+    const authSuccess = document.getElementById("auth-success");
+
     const joinBtn = document.getElementById("join-btn");
     const boardIdInput = document.getElementById("board-id-input");
     const nicknameInput = document.getElementById("nickname-input");
@@ -29,6 +37,67 @@ document.addEventListener("DOMContentLoaded", () => {
     window.isEraserMode = isEraserMode;
     window.undoStack = undoStack;
     window.redoStack = redoStack;
+
+    let authToken = localStorage.getItem("auth_token");
+    if (authToken) {
+        // Try to decode or just assume valid for now, show join board
+        const tokenParts = authToken.split('.');
+        if (tokenParts.length === 3) {
+            try {
+                const payload = JSON.parse(atob(tokenParts[1]));
+                authModal.style.display = "none";
+                loginModal.style.display = "flex";
+                nicknameInput.value = payload.sub;
+            } catch (e) {
+                // Invalid token
+                localStorage.removeItem("auth_token");
+            }
+        }
+    }
+
+    async function handleAuth(action) {
+        authError.style.display = "none";
+        authSuccess.style.display = "none";
+        const username = authUsernameInput.value.trim();
+        const password = authPasswordInput.value.trim();
+
+        if (!username || !password) {
+            authError.innerText = "Username and password required";
+            authError.style.display = "block";
+            return;
+        }
+
+        try {
+            const res = await fetch(`/${action}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username, password })
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+                authError.innerText = data.detail || `Error during ${action}`;
+                authError.style.display = "block";
+            } else {
+                if (action === "register") {
+                    authSuccess.innerText = "Registration successful! You can now log in.";
+                    authSuccess.style.display = "block";
+                } else if (action === "login") {
+                    localStorage.setItem("auth_token", data.access_token);
+                    authToken = data.access_token;
+                    authModal.style.display = "none";
+                    loginModal.style.display = "flex";
+                    nicknameInput.value = data.username;
+                }
+            }
+        } catch (err) {
+            authError.innerText = "Network error";
+            authError.style.display = "block";
+        }
+    }
+
+    authLoginBtn.addEventListener("click", () => handleAuth("login"));
+    authRegisterBtn.addEventListener("click", () => handleAuth("register"));
 
     function pushHistory(actionType, prevData, newData) {
         if (isProcessingSync || isUndoRedo) return;
@@ -376,7 +445,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Connect WebSocket
         const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-        ws = new WebSocket(`${protocol}//${window.location.host}/ws/${boardId}/${nickname}`);
+        const wsUrl = new URL(`${protocol}://${window.location.host}/ws/${boardId}/${nickname}`);
+        if (authToken) {
+            wsUrl.searchParams.append("token", authToken);
+        }
+        ws = new WebSocket(wsUrl.toString());
 
         ws.onopen = () => {
             console.log("Connected to WS");

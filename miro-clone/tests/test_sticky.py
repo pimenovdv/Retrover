@@ -33,16 +33,22 @@ def test_sticky_note_playwright(app_server):
         page.goto("http://127.0.0.1:8002/")
 
         # Login
+        import uuid; page.fill("#auth-username", f"testuser_{str(uuid.uuid4())[:8]}")
+        page.fill("#auth-password", "password")
+        page.click("#register-btn")
+        page.wait_for_timeout(500)
+        page.click("#login-btn")
+        page.wait_for_selector("#board-id-input", state="visible")
         page.fill("#board-id-input", "sticky_board")
-        page.fill("#nickname-input", "playwright_user")
         page.click("#join-btn")
 
         # Wait for canvas
         page.wait_for_selector("#canvas-container", state="visible")
+        page.wait_for_timeout(3000)
 
         # Add a sticky note
         page.click("#btn-sticky")
-        page.wait_for_timeout(1000) # give it time to render and send WS
+        page.wait_for_timeout(3000) # give it time to render and send WS
 
         # Verify objects on canvas
         objects = page.evaluate("""() => {

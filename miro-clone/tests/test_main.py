@@ -479,7 +479,7 @@ async def test_initial_shapes_load_integrity_explicit(setup_db_sync):
     mock_ws.receive_text.side_effect = Exception("Stop loop") # just to break the loop
 
     try:
-        await websocket_endpoint(mock_ws, "test_board_err", "nick", mock_db)
+        await websocket_endpoint(mock_ws, "test_board_err", "nick", "fake_token", mock_db)
     except Exception:
         pass
 

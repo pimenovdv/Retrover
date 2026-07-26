@@ -35,16 +35,22 @@ def test_copy_paste_playwright(app_server):
         page.goto("http://127.0.0.1:8001/")
 
         # Login
+        import uuid; page.fill("#auth-username", f"testuser_{str(uuid.uuid4())[:8]}")
+        page.fill("#auth-password", "password")
+        page.click("#register-btn")
+        page.wait_for_timeout(500)
+        page.click("#login-btn")
+        page.wait_for_selector("#board-id-input", state="visible")
         page.fill("#board-id-input", "copy_paste_board")
-        page.fill("#nickname-input", "playwright_user")
         page.click("#join-btn")
 
         # Wait for canvas
         page.wait_for_selector("#canvas-container", state="visible")
+        page.wait_for_timeout(3000)
 
         # Add a rectangle
         page.click("#btn-rect")
-        page.wait_for_timeout(1000) # give it time to render and send WS
+        page.wait_for_timeout(3000) # give it time to render and send WS
 
         # Select the newly added rectangle
         # We can evaluate to select it

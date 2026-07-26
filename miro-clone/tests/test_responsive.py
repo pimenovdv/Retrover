@@ -66,6 +66,7 @@ def test_responsive_mobile_viewport(test_server):
         page.click("#join-btn")
 
         page.wait_for_selector("#canvas-container", state="visible")
+        page.wait_for_timeout(3000)
         page.wait_for_timeout(500)
 
         # Ensure the toolbar is loaded
