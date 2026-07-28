@@ -1,3 +1,4 @@
+import uuid
 import pytest
 import os
 import threading
@@ -39,8 +40,10 @@ def test_eraser_tool(app_server):
 
         # Login
         page.fill("#board-id-input", "eraser-board")
-        page.fill("#nickname-input", "eraser-user")
-        page.click("#join-btn")
+        username = f"user_{uuid.uuid4()}"
+        page.fill("#nickname-input", username)
+        page.fill("#password-input", "password123")
+        page.click("#register-btn")
 
         # Wait for the canvas to be ready
         page.wait_for_selector("#canvas-container", state="visible")

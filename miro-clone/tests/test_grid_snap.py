@@ -1,3 +1,4 @@
+import uuid
 import pytest
 import os
 import threading
@@ -36,8 +37,10 @@ def test_grid_snapping(app_server):
 
         # Login
         page.fill("#board-id-input", "grid_snap_board")
-        page.fill("#nickname-input", "playwright_user")
-        page.click("#join-btn")
+        username = f"user_{uuid.uuid4()}"
+        page.fill("#nickname-input", username)
+        page.fill("#password-input", "password123")
+        page.click("#register-btn")
 
         # Wait for canvas
         page.wait_for_selector("#canvas-container", state="visible")

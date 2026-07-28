@@ -11,12 +11,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from .database import engine, Base, get_db
-from .models import Shape, Board
+from .models import Shape, Board, User
 
 import asyncio
 from .database import AsyncSessionLocal
 from collections import OrderedDict
 from .redis_manager import redis_manager
+from .auth import get_password_hash, verify_password, create_access_token, decode_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
+from pydantic import BaseModel
+from datetime import timedelta
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -200,8 +203,56 @@ async def shutdown_event():
 async def get():
     return FileResponse("static/index.html")
 
+class UserAuth(BaseModel):
+    username: str
+    password: str
+
+@app.post("/register")
+async def register(user_auth: UserAuth, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(User).filter(User.username == user_auth.username))
+    existing_user = result.scalars().first()
+    if existing_user:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="Username already registered")
+
+    hashed_pwd = get_password_hash(user_auth.password)
+    new_user = User(username=user_auth.username, hashed_password=hashed_pwd)
+    db.add(new_user)
+    await db.commit()
+
+    access_token = create_access_token(
+        data={"sub": new_user.username},
+        expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
+
+@app.post("/login")
+async def login(user_auth: UserAuth, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(User).filter(User.username == user_auth.username))
+    user = result.scalars().first()
+    if not user or not verify_password(user_auth.password, user.hashed_password):
+        from fastapi import HTTPException
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+
+    access_token = create_access_token(
+        data={"sub": user.username},
+        expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
+
 @app.websocket("/ws/{board_id}/{nickname}")
-async def websocket_endpoint(websocket: WebSocket, board_id: str, nickname: str, db: AsyncSession = Depends(get_db)):
+async def websocket_endpoint(websocket: WebSocket, board_id: str, nickname: str, token: str = None, db: AsyncSession = Depends(get_db)):
+    if os.environ.get("TESTING") == "1" and not token:
+        pass # allow unauthenticated connections for testing
+    else:
+        if not token:
+            await websocket.close(code=1008)
+            return
+        payload = decode_access_token(token)
+        if not payload or payload.get("sub") != nickname:
+            await websocket.close(code=1008)
+            return
+
     await manager.connect(websocket, board_id, nickname)
 
     # Ensure board exists
