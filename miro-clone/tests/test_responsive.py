@@ -1,3 +1,4 @@
+import uuid
 import pytest
 import os
 import asyncio
@@ -62,8 +63,10 @@ def test_responsive_mobile_viewport(test_server):
         page.goto(test_server)
 
         # Login
-        page.fill("#nickname-input", "mobile_user")
-        page.click("#join-btn")
+        username = f"user_{uuid.uuid4()}"
+        page.fill("#nickname-input", username)
+        page.fill("#password-input", "password123")
+        page.click("#register-btn")
 
         page.wait_for_selector("#canvas-container", state="visible")
         page.wait_for_timeout(500)

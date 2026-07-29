@@ -1,6 +1,9 @@
 document.addEventListener("DOMContentLoaded", () => {
     const loginModal = document.getElementById("login-modal");
-    const joinBtn = document.getElementById("join-btn");
+    const registerBtn = document.getElementById("register-btn");
+    const loginBtn = document.getElementById("login-btn");
+    const passwordInput = document.getElementById("password-input");
+    const authError = document.getElementById("auth-error");
     const boardIdInput = document.getElementById("board-id-input");
     const nicknameInput = document.getElementById("nickname-input");
     const toolbar = document.getElementById("toolbar");
@@ -108,19 +111,43 @@ document.addEventListener("DOMContentLoaded", () => {
         isUndoRedo = false;
     }
 
-    joinBtn.addEventListener("click", () => {
+    async function authenticate(endpoint) {
         nickname = nicknameInput.value.trim();
         boardId = boardIdInput.value.trim() || "default";
-        if (nickname) {
-            loginModal.style.display = "none";
-            toolbar.style.display = "flex";
-            canvasContainer.style.display = "block";
-        document.getElementById("minimap-container").style.display = "block";
+        const password = passwordInput.value;
 
-            document.getElementById("chat-panel").style.display = "flex";
-            initApp();
+        if (nickname && password) {
+            try {
+                const response = await fetch(endpoint, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ username: nickname, password: password })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    localStorage.setItem("token", data.access_token);
+
+                    loginModal.style.display = "none";
+                    toolbar.style.display = "flex";
+                    canvasContainer.style.display = "block";
+                    document.getElementById("minimap-container").style.display = "block";
+                    document.getElementById("chat-panel").style.display = "flex";
+                    initApp();
+                } else {
+                    const errData = await response.json();
+                    authError.innerText = errData.detail || "Authentication failed";
+                }
+            } catch (err) {
+                authError.innerText = "Error connecting to server";
+            }
+        } else {
+            authError.innerText = "Please enter Nickname and Password.";
         }
-    });
+    }
+
+    registerBtn.addEventListener("click", () => authenticate("/register"));
+    loginBtn.addEventListener("click", () => authenticate("/login"));
 
     function initApp() {
 
@@ -376,7 +403,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Connect WebSocket
         const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-        ws = new WebSocket(`${protocol}//${window.location.host}/ws/${boardId}/${nickname}`);
+        const token = localStorage.getItem("token") || "";
+        ws = new WebSocket(`${protocol}//${window.location.host}/ws/${boardId}/${nickname}?token=${token}`);
 
         ws.onopen = () => {
             console.log("Connected to WS");

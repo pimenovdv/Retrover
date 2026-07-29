@@ -1,3 +1,4 @@
+import uuid
 import pytest
 import os
 import asyncio
@@ -67,8 +68,10 @@ def test_undo_redo(test_server):
         page = browser.new_page()
         page.goto(test_server)
 
-        page.fill("#nickname-input", "playwright_user")
-        page.click("#join-btn")
+        username = f"user_{uuid.uuid4()}"
+        page.fill("#nickname-input", username)
+        page.fill("#password-input", "password123")
+        page.click("#register-btn")
 
         page.wait_for_selector("#canvas-container", state="visible")
         page.wait_for_timeout(500)

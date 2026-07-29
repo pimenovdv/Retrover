@@ -1,3 +1,4 @@
+import uuid
 import asyncio
 import os
 import threading
@@ -38,8 +39,10 @@ def test_minimap(server):
 
         # Login
         page.fill("#board-id-input", "test_board")
-        page.fill("#nickname-input", "tester")
-        page.click("#join-btn")
+        username = f"user_{uuid.uuid4()}"
+        page.fill("#nickname-input", username)
+        page.fill("#password-input", "password123")
+        page.click("#register-btn")
 
         # Wait for canvas to load
         page.wait_for_selector("#canvas-container", state="visible")

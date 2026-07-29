@@ -1,3 +1,4 @@
+import uuid
 import os
 import pytest
 import uvicorn
@@ -30,8 +31,10 @@ def test_export_image(server):
         # Navigate and join the board
         page.goto("http://127.0.0.1:8006")
         page.fill("#board-id-input", "export-test-board")
-        page.fill("#nickname-input", "testuser")
-        page.click("#join-btn")
+        username = f"user_{uuid.uuid4()}"
+        page.fill("#nickname-input", username)
+        page.fill("#password-input", "password123")
+        page.click("#register-btn")
 
         # Wait for the toolbar and canvas to appear
         page.wait_for_selector("#toolbar", state="visible")

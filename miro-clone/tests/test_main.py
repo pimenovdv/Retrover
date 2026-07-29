@@ -460,7 +460,7 @@ async def test_initial_shapes_load_integrity_explicit(setup_db_sync):
     # We will simulate a concurrent insert exception by directly mocking the db execute temporarily.
     from src.models import Board
     from sqlalchemy.ext.asyncio import AsyncSession
-    from unittest.mock import AsyncMock, MagicMock
+    from unittest.mock import AsyncMock, MagicMock, patch
     from sqlalchemy.exc import IntegrityError
 
     mock_db = AsyncMock(spec=AsyncSession)
@@ -478,10 +478,12 @@ async def test_initial_shapes_load_integrity_explicit(setup_db_sync):
     mock_ws = AsyncMock()
     mock_ws.receive_text.side_effect = Exception("Stop loop") # just to break the loop
 
-    try:
-        await websocket_endpoint(mock_ws, "test_board_err", "nick", mock_db)
-    except Exception:
-        pass
+    with patch("src.main.decode_access_token", return_value={"sub": "nick"}):
+        try:
+            # Note: testing with a mock token to bypass WS close for unauthenticated connections
+            await websocket_endpoint(mock_ws, "test_board_err", "nick", "fake_token", mock_db)
+        except Exception:
+            pass
 
     # Assert rollback was called
     mock_db.rollback.assert_called_once()

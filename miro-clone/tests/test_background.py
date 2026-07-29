@@ -1,3 +1,4 @@
+import uuid
 import asyncio
 import json
 import logging
@@ -41,8 +42,10 @@ async def test_background_image(test_server):
 
         # Login
         await page.fill("#board-id-input", "bg_test_board")
-        await page.fill("#nickname-input", "TestUser")
-        await page.click("#join-btn")
+        username = f"user_{uuid.uuid4()}"
+        await page.fill("#nickname-input", username)
+        await page.fill("#password-input", "password123")
+        await page.click("#register-btn")
 
         await page.wait_for_selector("#canvas-container", state="visible")
 
