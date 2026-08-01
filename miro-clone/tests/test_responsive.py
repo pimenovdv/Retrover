@@ -1,17 +1,19 @@
-import uuid
-import pytest
-import os
 import asyncio
+import os
 import sys
 import threading
-import uvicorn
 import time
+import uuid
+
+import pytest
+import uvicorn
 
 os.environ["TESTING"] = "1"
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from src.main import app
 from src.database import Base, engine
+from src.main import app
+
 
 @pytest.fixture(autouse=True, scope="module")
 def setup_db_sync():
@@ -52,7 +54,9 @@ def test_server():
     thread.join(timeout=2)
 
 
-@pytest.mark.skipif(os.environ.get('CI') == 'true', reason='Playwright dependencies fail on CI')
+@pytest.mark.skipif(
+    os.environ.get("CI") == "true", reason="Playwright dependencies fail on CI"
+)
 def test_responsive_mobile_viewport(test_server):
     from playwright.sync_api import sync_playwright
 
@@ -78,15 +82,19 @@ def test_responsive_mobile_viewport(test_server):
         # Click on rectangle to ensure properties panel works in mobile view
         page.click("#btn-rect")
         page.wait_for_timeout(500)
-        page.mouse.click(100, 100) # Ensure a shape is selected
+        page.mouse.click(100, 100)  # Ensure a shape is selected
         page.wait_for_timeout(500)
 
         # In Playwright, we can evaluate a script to check computed styles
-        toolbar_width = page.evaluate("window.getComputedStyle(document.getElementById('toolbar')).width")
+        page.evaluate(
+            "window.getComputedStyle(document.getElementById('toolbar')).width"
+        )
 
         # Check if chat panel has proper mobile styling
         # (width 250px according to the new media query)
-        chat_width = page.evaluate("window.getComputedStyle(document.getElementById('chat-panel')).width")
+        chat_width = page.evaluate(
+            "window.getComputedStyle(document.getElementById('chat-panel')).width"
+        )
         assert chat_width == "250px"
 
         browser.close()

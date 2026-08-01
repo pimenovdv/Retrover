@@ -11,6 +11,30 @@
 </head>
 <body>
 
+    <!-- Share Modal -->
+    <div id="share-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h2>Share Board</h2>
+            <p>Share this link with others to collaborate:</p>
+            <input type="text" id="share-link-input" readonly style="width: 100%; margin-bottom: 10px;" />
+            <button id="copy-link-btn">Copy Link</button>
+            <div id="access-control-container" style="display: none; margin-top: 15px;">
+                <label for="public-access-select">Access:</label>
+                <select id="public-access-select">
+                    <option value="edit">Anyone can edit</option>
+                    <option value="view">Anyone can view</option>
+                </select>
+                <div id="access-status-msg" style="color: green; font-size: 0.9em; margin-top: 5px;"></div>
+            </div>
+            <button id="close-share-btn" style="margin-top: 15px;">Close</button>
+        </div>
+    </div>
+
+    <!-- Header Actions (Share Button) -->
+    <div id="header-actions" style="display: none; position: absolute; top: 10px; right: 10px; z-index: 1000;">
+        <button id="btn-share" style="padding: 10px 15px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Share</button>
+    </div>
+
     <!-- Login Modal -->
     <div id="login-modal" class="modal">
         <div class="modal-content">

@@ -1,13 +1,16 @@
 import os
+
 import pytest
 from fastapi.testclient import TestClient
 
 os.environ["TESTING"] = "1"
 
-from src.main import app
-from src.database import Base, engine
 import asyncio
 import uuid
+
+from src.database import Base, engine
+from src.main import app
+
 
 @pytest.fixture(scope="module")
 def client():
@@ -25,19 +28,24 @@ def client():
 
     loop.close()
 
+
 def test_register_login(client):
     username = f"testuser_{uuid.uuid4()}"
     password = "testpassword123"
 
     # Test Register
-    response = client.post("/register", json={"username": username, "password": password})
+    response = client.post(
+        "/register", json={"username": username, "password": password}
+    )
     assert response.status_code == 200
     data = response.json()
     assert "access_token" in data
     assert data["token_type"] == "bearer"
 
     # Test Register Duplicate
-    response = client.post("/register", json={"username": username, "password": password})
+    response = client.post(
+        "/register", json={"username": username, "password": password}
+    )
     assert response.status_code == 400
 
     # Test Login
@@ -48,8 +56,11 @@ def test_register_login(client):
     assert data["token_type"] == "bearer"
 
     # Test Login Invalid
-    response = client.post("/login", json={"username": username, "password": "wrongpassword"})
+    response = client.post(
+        "/login", json={"username": username, "password": "wrongpassword"}
+    )
     assert response.status_code == 401
+
 
 def test_unauthenticated_ws_rejected(client):
     # Unset TESTING to simulate production env for this specific block
@@ -57,8 +68,10 @@ def test_unauthenticated_ws_rejected(client):
     os.environ["TESTING"] = "0"
 
     try:
-        with pytest.raises(Exception): # WebSocketDisconnect or similar due to code=1008
+        with pytest.raises(
+            Exception
+        ):  # WebSocketDisconnect or similar due to code=1008
             with client.websocket_connect("/ws/default/testuser"):
                 pass
     finally:
-        os.environ["TESTING"] = "1" # Restore
+        os.environ["TESTING"] = "1"  # Restore
