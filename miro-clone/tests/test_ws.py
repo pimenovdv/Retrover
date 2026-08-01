@@ -61,13 +61,23 @@ def test_ws_coverage():
             # test concurrent connection to trigger the board fetch and shape load
             with client.websocket_connect("/ws/new_board/user2") as ws2:
                 data2 = ws2.receive_json()
+                while data2.get("type") != "init":
+                    data2 = ws2.receive_json()
                 assert data2["type"] == "init"
 
                 # Should get update
                 ws2.send_json({"action": "cursor", "object": {"x": 10, "y": 10}})
 
                 res = ws.receive_json()
-                assert res["action"] == "cursor"
+                # We might receive 'update' (from earlier add), access_change from concurrent creation, or the cursor
+                while res.get("action") != "cursor" and res.get("type") != "cursor":
+                    res = ws.receive_json()
+
+                # Check for either style depending on how cursor is broadcast
+                if "action" in res:
+                    assert res["action"] == "cursor"
+                else:
+                    assert res["type"] == "cursor"
 
 
 @pytest.mark.asyncio
