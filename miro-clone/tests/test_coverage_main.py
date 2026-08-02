@@ -172,13 +172,15 @@ async def test_websocket_endpoint_existing_board():
 
     from src.database import AsyncSessionLocal
     from src.models import Board, Shape
-
+    import uuid
+    board_id = f"pre_board_{uuid.uuid4()}"
+    shape_id = f"s1_{uuid.uuid4()}"
     async with AsyncSessionLocal() as session:
-        b = Board(id="pre_board", name="Pre Board")
+        b = Board(id=board_id, name="Pre Board")
         session.add(b)
         s = Shape(
-            id="s1",
-            board_id="pre_board",
+            id=shape_id,
+            board_id=board_id,
             type="circle",
             left=10,
             top=10,
@@ -195,7 +197,7 @@ async def test_websocket_endpoint_existing_board():
         await session.commit()
 
     with TestClient(app) as client:
-        with client.websocket_connect("/ws/pre_board/pre_user") as ws:
+        with client.websocket_connect(f"/ws/{board_id}/pre_user") as ws:
             msg = ws.receive_json()
             assert msg["type"] == "init"
 
@@ -219,10 +221,13 @@ def test_websocket_exceptions():
 async def test_db_batcher_merge_other():
     from src.main import db_batcher
 
+    import uuid
+    id1 = str(uuid.uuid4())
+    id2 = str(uuid.uuid4())
     db_batcher.queue.clear()
-    await db_batcher.push("modify", {"id": "x1", "val": 1})
-    await db_batcher.push("remove", {"id": "x1"})
-    await db_batcher.push("remove", {"id": "x2"})
+    await db_batcher.push("modify", {"id": id1, "val": 1})
+    await db_batcher.push("remove", {"id": id1})
+    await db_batcher.push("remove", {"id": id2})
     await db_batcher.push("remove", {"id": "x2"})
     await db_batcher.process_batch()
 
@@ -279,10 +284,11 @@ def test_upload_pdf_invalid():
 async def test_db_batcher_add_add():
     from src.main import db_batcher
 
+    import uuid
+    id_str = str(uuid.uuid4())
     db_batcher.queue.clear()
-
-    await db_batcher.push("add", {"id": "x3"})
-    await db_batcher.push("add", {"id": "x3", "val": 2})
+    await db_batcher.push("add", {"id": id_str})
+    await db_batcher.push("add", {"id": id_str, "val": 2})
 
     db_batcher.queue.clear()
     original_process = db_batcher.process_batch
