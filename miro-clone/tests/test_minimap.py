@@ -1,15 +1,16 @@
-import uuid
-import asyncio
 import os
 import threading
+import time
+import uuid
+
 import pytest
 import uvicorn
-import time
 
 # Set TESTING environment variable before importing app modules
 os.environ["TESTING"] = "1"
 
 from src.main import app
+
 
 @pytest.fixture(scope="module")
 def server():
@@ -29,9 +30,14 @@ def server():
     server.should_exit = True
     thread.join()
 
-@pytest.mark.skipif(os.environ.get('CI') == 'true', reason="Skipping UI tests in CI due to missing browser dependencies.")
+
+@pytest.mark.skipif(
+    os.environ.get("CI") == "true",
+    reason="Skipping UI tests in CI due to missing browser dependencies.",
+)
 def test_minimap(server):
     from playwright.sync_api import sync_playwright
+
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
@@ -66,6 +72,8 @@ def test_minimap(server):
         new_vpt = page.evaluate("window.canvas.viewportTransform")
 
         # Verify viewport changed (panned)
-        assert initial_vpt[4] != new_vpt[4] or initial_vpt[5] != new_vpt[5], "Viewport should have changed after clicking minimap"
+        assert (
+            initial_vpt[4] != new_vpt[4] or initial_vpt[5] != new_vpt[5]
+        ), "Viewport should have changed after clicking minimap"
 
         browser.close()

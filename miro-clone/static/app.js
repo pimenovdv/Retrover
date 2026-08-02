@@ -13,6 +13,22 @@ document.addEventListener("DOMContentLoaded", () => {
     const chatSend = document.getElementById("chat-send");
     const chatMessages = document.getElementById("chat-messages");
     const cursorsContainer = document.getElementById("cursors-container");
+    const shareModal = document.getElementById("share-modal");
+    const btnShare = document.getElementById("btn-share");
+    const closeShareBtn = document.getElementById("close-share-btn");
+    const copyLinkBtn = document.getElementById("copy-link-btn");
+    const shareLinkInput = document.getElementById("share-link-input");
+    const headerActions = document.getElementById("header-actions");
+    const accessControlContainer = document.getElementById("access-control-container");
+    const publicAccessSelect = document.getElementById("public-access-select");
+    const accessStatusMsg = document.getElementById("access-status-msg");
+
+    // Read board ID from URL query parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const boardParam = urlParams.get('board');
+    if (boardParam) {
+        boardIdInput.value = boardParam;
+    }
 
     let activeUsers = {};
     let lastCursorSend = 0;
@@ -28,6 +44,8 @@ document.addEventListener("DOMContentLoaded", () => {
     let undoStack = [];
     let redoStack = [];
     let isEraserMode = false;
+    let isViewer = false;
+    let isOwner = false;
 
     window.isEraserMode = isEraserMode;
     window.undoStack = undoStack;
@@ -129,11 +147,13 @@ document.addEventListener("DOMContentLoaded", () => {
                     localStorage.setItem("token", data.access_token);
 
                     loginModal.style.display = "none";
-                    toolbar.style.display = "flex";
-                    canvasContainer.style.display = "block";
-                    document.getElementById("minimap-container").style.display = "block";
-                    document.getElementById("chat-panel").style.display = "flex";
-                    initApp();
+
+                    // Since board is created asynchronously on WS connection,
+                    // we connect WS first, wait for init, then fetch permissions.
+
+                    loginModal.style.display = "none";
+
+                    initApp(); // connects WS
                 } else {
                     const errData = await response.json();
                     authError.innerText = errData.detail || "Authentication failed";
@@ -401,6 +421,58 @@ document.addEventListener("DOMContentLoaded", () => {
             updatePropertiesPanel();
         });
 
+        // Setup Share Modal
+        btnShare.addEventListener("click", () => {
+            const shareUrl = `${window.location.origin}/?board=${boardId}`;
+            shareLinkInput.value = shareUrl;
+
+            if (isOwner) {
+                accessControlContainer.style.display = "block";
+                accessStatusMsg.innerText = "";
+            } else {
+                accessControlContainer.style.display = "none";
+            }
+
+            shareModal.style.display = "flex";
+        });
+
+        closeShareBtn.addEventListener("click", () => {
+            shareModal.style.display = "none";
+        });
+
+        copyLinkBtn.addEventListener("click", () => {
+            shareLinkInput.select();
+            document.execCommand("copy");
+            copyLinkBtn.innerText = "Copied!";
+            setTimeout(() => { copyLinkBtn.innerText = "Copy Link"; }, 2000);
+        });
+
+        publicAccessSelect.addEventListener("change", async (e) => {
+            if (!isOwner) return;
+            const newAccess = e.target.value;
+            const token = localStorage.getItem("token");
+            try {
+                const res = await fetch(`/api/boards/${boardId}`, {
+                    method: 'PUT',
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ public_access: newAccess })
+                });
+                if (res.ok) {
+                    accessStatusMsg.innerText = "Access updated successfully";
+                    accessStatusMsg.style.color = "green";
+                } else {
+                    accessStatusMsg.innerText = "Failed to update access";
+                    accessStatusMsg.style.color = "red";
+                }
+            } catch (err) {
+                accessStatusMsg.innerText = "Error communicating with server";
+                accessStatusMsg.style.color = "red";
+            }
+        });
+
         // Connect WebSocket
         const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
         const token = localStorage.getItem("token") || "";
@@ -410,7 +482,7 @@ document.addEventListener("DOMContentLoaded", () => {
             console.log("Connected to WS");
         };
 
-        ws.onmessage = (event) => {
+        ws.onmessage = async (event) => {
             const message = JSON.parse(event.data);
 
             if (message.type === "init") {
@@ -420,7 +492,33 @@ document.addEventListener("DOMContentLoaded", () => {
                     addShapeToCanvas(shapeData);
                 });
                 isProcessingSync = false;
-                        } else if (message.type === "update") {
+
+                // Fetch board info to check permissions now that it's guaranteed to exist
+                try {
+                    const boardRes = await fetch(`/api/boards/${boardId}`, {
+                        headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
+                    });
+                    if (boardRes.ok) {
+                        const boardData = await boardRes.json();
+                        isOwner = (boardData.owner_username === nickname);
+                        isViewer = (!isOwner && boardData.public_access === "view");
+
+                        if (isOwner) {
+                            publicAccessSelect.value = boardData.public_access;
+                        }
+                    }
+                } catch (e) {
+                    console.warn("Could not fetch board info, assuming edit permissions");
+                }
+
+                if (!isViewer) {
+                    toolbar.style.display = "flex";
+                }
+                canvasContainer.style.display = "block";
+                headerActions.style.display = "block";
+                document.getElementById("minimap-container").style.display = "block";
+                document.getElementById("chat-panel").style.display = "flex";
+            } else if (message.type === "update") {
                 handleRemoteUpdate(message.action, message.object, message.sender);
             }
         };
@@ -1017,6 +1115,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         window.addEventListener('keydown', (e) => {
+             if (isViewer) return;
              if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
                  if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
                  copy();
@@ -1322,13 +1421,36 @@ function handleSelection(opt) {
             canvas.getObjects().forEach(o => {
                 if (o.lockedBy === sender) {
                     delete o.lockedBy;
-                    o.selectable = true;
+                    if (!isViewer) {
+                        o.selectable = true;
+                    }
                     o.set('opacity', 1);
                     o.set('stroke', null);
                     o.set('strokeWidth', null);
                 }
             });
             canvas.requestRenderAll();
+            return;
+        }
+
+        if (action === "access_change") {
+            if (!isOwner) {
+                isViewer = (objData.public_access === "view");
+                toolbar.style.display = isViewer ? "none" : "flex";
+
+                // Update existing objects
+                canvas.getObjects().forEach(obj => {
+                    if (obj.is_background) return; // Keep bg unselectable
+                    obj.selectable = !isViewer;
+                    obj.evented = !isViewer;
+                });
+
+                if (isViewer) {
+                    canvas.discardActiveObject();
+                }
+
+                canvas.requestRenderAll();
+            }
             return;
         }
 

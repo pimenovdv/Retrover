@@ -1,23 +1,18 @@
-import uuid
-import pytest
-import os
 import asyncio
+import os
 import sys
 import threading
+import uuid
+
+import pytest
 import uvicorn
 
-
-import os
-import subprocess
-
-
-
-
 os.environ["TESTING"] = "1"
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from src.main import app
 from src.database import Base, engine
+from src.main import app
+
 
 @pytest.fixture(autouse=True, scope="module")
 def setup_db_sync():
@@ -51,6 +46,7 @@ def test_server():
     thread.start()
 
     import time
+
     time.sleep(2)
 
     yield "http://127.0.0.1:8001"
@@ -59,10 +55,13 @@ def test_server():
     thread.join(timeout=2)
 
 
-@pytest.mark.skipif(os.environ.get('CI') == 'true', reason='Playwright dependencies fail on CI')
+@pytest.mark.skipif(
+    os.environ.get("CI") == "true", reason="Playwright dependencies fail on CI"
+)
 def test_undo_redo(test_server):
 
     from playwright.sync_api import sync_playwright
+
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
@@ -83,38 +82,48 @@ def test_undo_redo(test_server):
         # Let's ensure window.undoStack evaluates correctly or we check another property.
         # We will dispatch keyboard events for undo/redo
 
-        page.keyboard.down('Control')
-        page.keyboard.press('z')
-        page.keyboard.up('Control')
+        page.keyboard.down("Control")
+        page.keyboard.press("z")
+        page.keyboard.up("Control")
         page.wait_for_timeout(500)
 
-        page.keyboard.down('Control')
-        page.keyboard.press('y')
-        page.keyboard.up('Control')
+        page.keyboard.down("Control")
+        page.keyboard.press("y")
+        page.keyboard.up("Control")
         page.wait_for_timeout(500)
 
         # Perform undo
         page.click("#btn-undo")
         page.wait_for_timeout(500)
 
-        undo_len = page.evaluate("() => { return window.undoStack ? window.undoStack.length : -1; }")
+        undo_len = page.evaluate(
+            "() => { return window.undoStack ? window.undoStack.length : -1; }"
+        )
         assert undo_len == 0
 
-        redo_len = page.evaluate("() => { return window.redoStack ? window.redoStack.length : -1; }")
+        redo_len = page.evaluate(
+            "() => { return window.redoStack ? window.redoStack.length : -1; }"
+        )
         assert redo_len == 1
 
         # Perform redo
         page.click("#btn-redo")
         page.wait_for_timeout(500)
 
-        undo_len = page.evaluate("() => { return window.undoStack ? window.undoStack.length : -1; }")
+        undo_len = page.evaluate(
+            "() => { return window.undoStack ? window.undoStack.length : -1; }"
+        )
         assert undo_len == 1
 
-        redo_len = page.evaluate("() => { return window.redoStack ? window.redoStack.length : -1; }")
+        redo_len = page.evaluate(
+            "() => { return window.redoStack ? window.redoStack.length : -1; }"
+        )
         assert redo_len == 0
 
         # Verify canvas items visually restored
-        canvas_objects = page.evaluate("() => { return window.canvas ? window.canvas.getObjects().length : -1; }")
+        canvas_objects = page.evaluate(
+            "() => { return window.canvas ? window.canvas.getObjects().length : -1; }"
+        )
         assert canvas_objects > 0
 
         browser.close()

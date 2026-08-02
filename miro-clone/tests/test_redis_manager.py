@@ -1,8 +1,10 @@
-import pytest
-import json
 import asyncio
 from unittest.mock import MagicMock
+
+import pytest
+
 from src.redis_manager import RedisManager
+
 
 @pytest.mark.asyncio
 async def test_redis_manager_connects_fakeredis():
@@ -11,6 +13,7 @@ async def test_redis_manager_connects_fakeredis():
     assert rm.redis is not None
     assert rm.pubsub is not None
     await rm.close()
+
 
 @pytest.mark.asyncio
 async def test_redis_manager_publish_listen():
@@ -39,7 +42,7 @@ async def test_redis_manager_publish_listen():
     # Wait for listener to receive
     await asyncio.sleep(0.2)
 
-    assert getattr(mock_conn_manager, 'local_broadcast_called', False) is True
+    assert getattr(mock_conn_manager, "local_broadcast_called", False) is True
     args, kwargs = mock_conn_manager.call_args
     assert args[0] == "default"
     assert args[1] == test_msg

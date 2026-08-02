@@ -1,25 +1,26 @@
+import asyncio
 import json
 import logging
-from typing import Dict, Set
-
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends, UploadFile, File
-import aiofiles
 import os
-from fastapi.responses import HTMLResponse, FileResponse
-from fastapi.staticfiles import StaticFiles
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-
-from .database import engine, Base, get_db
-from .models import Shape, Board, User
-
-import asyncio
-from .database import AsyncSessionLocal
 from collections import OrderedDict
-from .redis_manager import redis_manager
-from .auth import get_password_hash, verify_password, create_access_token, decode_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
-from pydantic import BaseModel
 from datetime import timedelta
+from typing import Dict
+
+import aiofiles
+from fastapi import (Depends, FastAPI, File, HTTPException, UploadFile,
+                     WebSocket, WebSocketDisconnect)
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from .auth import (ACCESS_TOKEN_EXPIRE_MINUTES, create_access_token,
+                   decode_access_token, get_password_hash, oauth2_scheme,
+                   verify_password)
+from .database import AsyncSessionLocal, Base, engine, get_db
+from .models import Board, Shape, User
+from .redis_manager import redis_manager
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -30,6 +31,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 os.makedirs("uploads", exist_ok=True)
+
 
 class ConnectionManager:
     def __init__(self):
@@ -44,14 +46,19 @@ class ConnectionManager:
         logger.info(f"User {nickname} connected to board {board_id}")
 
     def disconnect(self, board_id: str, nickname: str):
-        if board_id in self.active_connections and nickname in self.active_connections[board_id]:
+        if (
+            board_id in self.active_connections
+            and nickname in self.active_connections[board_id]
+        ):
             del self.active_connections[board_id][nickname]
             logger.info(f"User {nickname} disconnected from board {board_id}")
             if not self.active_connections[board_id]:
                 del self.active_connections[board_id]
 
     async def local_broadcast(self, board_id: str, message: dict, exclude: str = None):
-        logger.info(f"Local broadcasting to board {board_id}: {message} excluding {exclude}")
+        logger.info(
+            f"Local broadcasting to board {board_id}: {message} excluding {exclude}"
+        )
         if board_id in self.active_connections:
             for nickname, connection in self.active_connections[board_id].items():
                 if nickname != exclude:
@@ -65,12 +72,13 @@ class ConnectionManager:
         # It will broadcast across instances, and each instance will local_broadcast
         await redis_manager.publish(message)
 
+
 manager = ConnectionManager()
 
 
 class DatabaseBatcher:
     def __init__(self):
-        self.queue = OrderedDict() # id -> (action, obj_data)
+        self.queue = OrderedDict()  # id -> (action, obj_data)
         self.lock = asyncio.Lock()
 
     async def push(self, action: str, obj_data: dict, board_id: str = "default"):
@@ -130,30 +138,74 @@ class DatabaseBatcher:
                             text=obj_data.get("text"),
                             fontSize=obj_data.get("fontSize"),
                             z_index=obj_data.get("z_index", 0),
-                            properties={k: v for k, v in obj_data.items() if k not in ["id", "board_id", "type", "left", "top", "width", "height", "fill", "radius", "text", "fontSize", "z_index"]}
+                            properties={
+                                k: v
+                                for k, v in obj_data.items()
+                                if k
+                                not in [
+                                    "id",
+                                    "board_id",
+                                    "type",
+                                    "left",
+                                    "top",
+                                    "width",
+                                    "height",
+                                    "fill",
+                                    "radius",
+                                    "text",
+                                    "fontSize",
+                                    "z_index",
+                                ]
+                            },
                         )
                         session.add(new_shape)
                     elif action == "modify":
-                        result = await session.execute(select(Shape).filter(Shape.id == obj_id))
+                        result = await session.execute(
+                            select(Shape).filter(Shape.id == obj_id)
+                        )
                         db_shape = result.scalars().first()
                         if db_shape:
-                            if "left" in obj_data: db_shape.left = obj_data["left"]
-                            if "top" in obj_data: db_shape.top = obj_data["top"]
-                            if "width" in obj_data: db_shape.width = obj_data["width"]
-                            if "height" in obj_data: db_shape.height = obj_data["height"]
-                            if "fill" in obj_data: db_shape.fill = obj_data["fill"]
-                            if "radius" in obj_data: db_shape.radius = obj_data["radius"]
-                            if "text" in obj_data: db_shape.text = obj_data["text"]
-                            if "fontSize" in obj_data: db_shape.fontSize = obj_data["fontSize"]
-                            if "z_index" in obj_data: db_shape.z_index = obj_data["z_index"]
+                            if "left" in obj_data:
+                                db_shape.left = obj_data["left"]
+                            if "top" in obj_data:
+                                db_shape.top = obj_data["top"]
+                            if "width" in obj_data:
+                                db_shape.width = obj_data["width"]
+                            if "height" in obj_data:
+                                db_shape.height = obj_data["height"]
+                            if "fill" in obj_data:
+                                db_shape.fill = obj_data["fill"]
+                            if "radius" in obj_data:
+                                db_shape.radius = obj_data["radius"]
+                            if "text" in obj_data:
+                                db_shape.text = obj_data["text"]
+                            if "fontSize" in obj_data:
+                                db_shape.fontSize = obj_data["fontSize"]
+                            if "z_index" in obj_data:
+                                db_shape.z_index = obj_data["z_index"]
 
                             current_props = dict(db_shape.properties or {})
                             for k, v in obj_data.items():
-                                if k not in ["id", "board_id", "type", "left", "top", "width", "height", "fill", "radius", "text", "fontSize", "z_index"]:
+                                if k not in [
+                                    "id",
+                                    "board_id",
+                                    "type",
+                                    "left",
+                                    "top",
+                                    "width",
+                                    "height",
+                                    "fill",
+                                    "radius",
+                                    "text",
+                                    "fontSize",
+                                    "z_index",
+                                ]:
                                     current_props[k] = v
                             db_shape.properties = current_props
                     elif action == "remove":
-                        result = await session.execute(select(Shape).filter(Shape.id == obj_id))
+                        result = await session.execute(
+                            select(Shape).filter(Shape.id == obj_id)
+                        )
                         db_shape = result.scalars().first()
                         if db_shape:
                             await session.delete(db_shape)
@@ -162,21 +214,23 @@ class DatabaseBatcher:
                 logger.error(f"Error processing database batch: {e}")
                 await session.rollback()
 
-db_batcher = DatabaseBatcher()
 
+db_batcher = DatabaseBatcher()
 
 
 db_worker_task = None
 
+
 async def db_writer_worker():
     while True:
-        await asyncio.sleep(1) # Process batch every 1 second
+        await asyncio.sleep(1)  # Process batch every 1 second
         try:
             await db_batcher.process_batch()
         except asyncio.CancelledError:
             break
         except Exception as e:
             logger.error(f"Error in db_writer_worker: {e}")
+
 
 @app.on_event("startup")
 async def startup_event():
@@ -186,6 +240,7 @@ async def startup_event():
     await redis_manager.start_listening(manager)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
 
 @app.on_event("shutdown")
 async def shutdown_event():
@@ -199,13 +254,82 @@ async def shutdown_event():
     # Flush remaining batch
     await db_batcher.process_batch()
 
+
 @app.get("/")
 async def get():
     return FileResponse("static/index.html")
 
+
+class BoardAccessUpdate(BaseModel):
+    public_access: str
+
+
+@app.get("/api/boards/{board_id}")
+async def get_board_access(board_id: str, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Board).filter(Board.id == board_id))
+    board = result.scalars().first()
+    if not board:
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=404, detail="Board not found")
+    return {
+        "id": board.id,
+        "owner_username": board.owner_username,
+        "public_access": board.public_access,
+    }
+
+
+@app.put("/api/boards/{board_id}")
+async def update_board_access(
+    board_id: str,
+    access_data: BoardAccessUpdate,
+    token: str = Depends(oauth2_scheme),
+    db: AsyncSession = Depends(get_db),
+):
+    from fastapi import HTTPException
+
+    payload = decode_access_token(token)
+    if not payload or not payload.get("sub"):
+        raise HTTPException(
+            status_code=401, detail="Invalid authentication credentials"
+        )
+
+    username = payload.get("sub")
+
+    result = await db.execute(select(Board).filter(Board.id == board_id))
+    board = result.scalars().first()
+    if not board:
+        raise HTTPException(status_code=404, detail="Board not found")
+
+    if board.owner_username != username:
+        raise HTTPException(
+            status_code=403, detail="Only the owner can update board access"
+        )
+
+    if access_data.public_access not in ["view", "edit"]:
+        raise HTTPException(status_code=400, detail="Invalid access mode")
+
+    board.public_access = access_data.public_access
+    await db.commit()
+
+    # Broadcast access change to connected clients
+    await manager.broadcast(
+        {
+            "type": "update",
+            "action": "access_change",
+            "object": {"public_access": board.public_access},
+            "sender": username,
+            "board_id": board_id,
+        }
+    )
+
+    return {"message": "Access updated successfully"}
+
+
 class UserAuth(BaseModel):
     username: str
     password: str
+
 
 @app.post("/register")
 async def register(user_auth: UserAuth, db: AsyncSession = Depends(get_db)):
@@ -213,6 +337,7 @@ async def register(user_auth: UserAuth, db: AsyncSession = Depends(get_db)):
     existing_user = result.scalars().first()
     if existing_user:
         from fastapi import HTTPException
+
         raise HTTPException(status_code=400, detail="Username already registered")
 
     hashed_pwd = get_password_hash(user_auth.password)
@@ -222,9 +347,10 @@ async def register(user_auth: UserAuth, db: AsyncSession = Depends(get_db)):
 
     access_token = create_access_token(
         data={"sub": new_user.username},
-        expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
     )
     return {"access_token": access_token, "token_type": "bearer"}
+
 
 @app.post("/login")
 async def login(user_auth: UserAuth, db: AsyncSession = Depends(get_db)):
@@ -232,18 +358,26 @@ async def login(user_auth: UserAuth, db: AsyncSession = Depends(get_db)):
     user = result.scalars().first()
     if not user or not verify_password(user_auth.password, user.hashed_password):
         from fastapi import HTTPException
+
         raise HTTPException(status_code=401, detail="Invalid username or password")
 
     access_token = create_access_token(
         data={"sub": user.username},
-        expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
+
 @app.websocket("/ws/{board_id}/{nickname}")
-async def websocket_endpoint(websocket: WebSocket, board_id: str, nickname: str, token: str = None, db: AsyncSession = Depends(get_db)):
+async def websocket_endpoint(
+    websocket: WebSocket,
+    board_id: str,
+    nickname: str,
+    token: str = None,
+    db: AsyncSession = Depends(get_db),
+):
     if os.environ.get("TESTING") == "1" and not token:
-        pass # allow unauthenticated connections for testing
+        pass  # allow unauthenticated connections for testing
     else:
         if not token:
             await websocket.close(code=1008)
@@ -257,23 +391,33 @@ async def websocket_endpoint(websocket: WebSocket, board_id: str, nickname: str,
 
     # Ensure board exists
     from sqlalchemy.exc import IntegrityError
+
     board_result = await db.execute(select(Board).filter(Board.id == board_id))
     board = board_result.scalars().first()
     if not board:
         try:
-            board = Board(id=board_id, name=f"Board {board_id}")
+            # First user to connect implicitly becomes the owner for this MVP
+            board = Board(
+                id=board_id,
+                name=f"Board {board_id}",
+                owner_username=nickname,
+                public_access="edit",
+            )
             db.add(board)
             await db.commit()
         except IntegrityError:
             await db.rollback()
             # Board was created by another concurrent request, which is fine
-            pass
+            board_result = await db.execute(select(Board).filter(Board.id == board_id))
+            board = board_result.scalars().first()
 
     # Ensure all pending db writes are flushed before querying existing shapes
     await db_batcher.process_batch()
 
     # Send all existing shapes to the newly connected user
-    result = await db.execute(select(Shape).filter(Shape.board_id == board_id).order_by(Shape.z_index.asc()))
+    result = await db.execute(
+        select(Shape).filter(Shape.board_id == board_id).order_by(Shape.z_index.asc())
+    )
     shapes = result.scalars().all()
 
     initial_shapes = []
@@ -285,12 +429,18 @@ async def websocket_endpoint(websocket: WebSocket, board_id: str, nickname: str,
             "top": s.top,
             "z_index": s.z_index,
         }
-        if s.width is not None: shape_data["width"] = s.width
-        if s.height is not None: shape_data["height"] = s.height
-        if s.fill is not None: shape_data["fill"] = s.fill
-        if s.radius is not None: shape_data["radius"] = s.radius
-        if s.text is not None: shape_data["text"] = s.text
-        if s.fontSize is not None: shape_data["fontSize"] = s.fontSize
+        if s.width is not None:
+            shape_data["width"] = s.width
+        if s.height is not None:
+            shape_data["height"] = s.height
+        if s.fill is not None:
+            shape_data["fill"] = s.fill
+        if s.radius is not None:
+            shape_data["radius"] = s.radius
+        if s.text is not None:
+            shape_data["text"] = s.text
+        if s.fontSize is not None:
+            shape_data["fontSize"] = s.fontSize
 
         # merge any extra properties
         if s.properties:
@@ -298,10 +448,7 @@ async def websocket_endpoint(websocket: WebSocket, board_id: str, nickname: str,
 
         initial_shapes.append(shape_data)
 
-    await websocket.send_text(json.dumps({
-        "type": "init",
-        "data": initial_shapes
-    }))
+    await websocket.send_text(json.dumps({"type": "init", "data": initial_shapes}))
 
     try:
         while True:
@@ -312,44 +459,84 @@ async def websocket_endpoint(websocket: WebSocket, board_id: str, nickname: str,
 
             action = message.get("action")
             obj_data = message.get("object", {})
-            obj_id = obj_data.get("id")
+            obj_data.get("id")
 
             if action in ["add", "modify", "remove"]:
-                await db_batcher.push(action, obj_data, board_id=board_id)
+                # Re-query board access state as it might have changed
+                board_check_result = await db.execute(
+                    select(Board).filter(Board.id == board_id)
+                )
+                current_board = board_check_result.scalars().first()
+
+                can_edit = True
+                if (
+                    current_board
+                    and current_board.public_access == "view"
+                    and current_board.owner_username != nickname
+                ):
+                    can_edit = False
+
+                if can_edit:
+                    await db_batcher.push(action, obj_data, board_id=board_id)
+                    # Broadcast the change to everyone else if allowed
+                    await manager.broadcast(
+                        {
+                            "type": "update",
+                            "action": action,
+                            "object": obj_data,
+                            "sender": nickname,
+                            "board_id": board_id,
+                        },
+                        exclude=nickname,
+                    )
             elif action in ["cursor", "select", "deselect", "chat"]:
                 # Transient actions, no DB update
-                pass
-
-            # Broadcast the change to everyone else
-            await manager.broadcast({
-                "type": "update",
-                "action": action,
-                "object": obj_data,
-                "sender": nickname,
-                "board_id": board_id
-            }, exclude=nickname)
+                await manager.broadcast(
+                    {
+                        "type": "update",
+                        "action": action,
+                        "object": obj_data,
+                        "sender": nickname,
+                        "board_id": board_id,
+                    },
+                    exclude=nickname,
+                )
 
     except WebSocketDisconnect:
         manager.disconnect(board_id, nickname)
-        await manager.broadcast({
-            "type": "update",
-            "action": "disconnect",
-            "sender": nickname,
-            "board_id": board_id
-        })
+        await manager.broadcast(
+            {
+                "type": "update",
+                "action": "disconnect",
+                "sender": nickname,
+                "board_id": board_id,
+            }
+        )
 
-from fastapi import HTTPException
+
+
+
 @app.post("/upload")
 async def upload_image(file: UploadFile = File(...)):
     import uuid
+
     import fitz
 
-    allowed_types = ["image/jpeg", "image/png", "image/gif", "image/webp", "application/pdf"]
+    allowed_types = [
+        "image/jpeg",
+        "image/png",
+        "image/gif",
+        "image/webp",
+        "application/pdf",
+    ]
     if file.content_type not in allowed_types:
-        raise HTTPException(status_code=400, detail="Invalid file type. Only images and PDFs are allowed.")
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid file type. Only images and PDFs are allowed.",
+        )
 
-    ext = file.filename.split('.')[-1].lower() if '.' in file.filename else 'png'
-    if ext not in ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf']:
+    ext = file.filename.split(".")[-1].lower() if "." in file.filename else "png"
+    if ext not in ["jpg", "jpeg", "png", "gif", "webp", "pdf"]:
         raise HTTPException(status_code=400, detail="Invalid file extension.")
 
     content = await file.read()
@@ -357,8 +544,10 @@ async def upload_image(file: UploadFile = File(...)):
     if file.content_type == "application/pdf":
         try:
             pdf_document = fitz.open(stream=content, filetype="pdf")
-        except Exception as e:
-            raise HTTPException(status_code=400, detail="Invalid or corrupted PDF file.")
+        except Exception:
+            raise HTTPException(
+                status_code=400, detail="Invalid or corrupted PDF file."
+            )
 
         urls = []
         for page_num in range(len(pdf_document)):
@@ -378,7 +567,7 @@ async def upload_image(file: UploadFile = File(...)):
         filename = f"{uuid.uuid4()}.{ext}"
         filepath = os.path.join("uploads", filename)
 
-        async with aiofiles.open(filepath, 'wb') as out_file:
+        async with aiofiles.open(filepath, "wb") as out_file:
             await out_file.write(content)
 
         return {"url": f"/uploads/{filename}"}
