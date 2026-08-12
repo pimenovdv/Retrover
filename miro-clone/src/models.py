@@ -14,6 +14,8 @@ class Board(Base):
 
     id = Column(String, primary_key=True, index=True)
     name = Column(String, nullable=True)
+    owner_username = Column(String, ForeignKey("users.username"), nullable=True)
+    public_access = Column(String, nullable=False, default="edit") # "edit" or "view"
 
 class Shape(Base):
     __tablename__ = "shapes"

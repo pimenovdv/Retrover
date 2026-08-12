@@ -261,13 +261,20 @@ async def websocket_endpoint(websocket: WebSocket, board_id: str, nickname: str,
     board = board_result.scalars().first()
     if not board:
         try:
-            board = Board(id=board_id, name=f"Board {board_id}")
+            # First user to connect creates the board and becomes the owner
+            board = Board(id=board_id, name=f"Board {board_id}", owner_username=nickname, public_access="edit")
             db.add(board)
             await db.commit()
+            # Refresh to ensure we have the default fields
+            await db.refresh(board)
         except IntegrityError:
             await db.rollback()
             # Board was created by another concurrent request, which is fine
-            pass
+            board_result = await db.execute(select(Board).filter(Board.id == board_id))
+            board = board_result.scalars().first()
+
+    is_owner = (board.owner_username == nickname)
+    can_edit = is_owner or (board.public_access == "edit")
 
     # Ensure all pending db writes are flushed before querying existing shapes
     await db_batcher.process_batch()
@@ -300,7 +307,10 @@ async def websocket_endpoint(websocket: WebSocket, board_id: str, nickname: str,
 
     await websocket.send_text(json.dumps({
         "type": "init",
-        "data": initial_shapes
+        "data": initial_shapes,
+        "can_edit": can_edit,
+        "is_owner": is_owner,
+        "public_access": board.public_access
     }))
 
     try:
@@ -315,6 +325,8 @@ async def websocket_endpoint(websocket: WebSocket, board_id: str, nickname: str,
             obj_id = obj_data.get("id")
 
             if action in ["add", "modify", "remove"]:
+                if not can_edit:
+                    continue # Drop edit operations if user cannot edit
                 await db_batcher.push(action, obj_data, board_id=board_id)
             elif action in ["cursor", "select", "deselect", "chat"]:
                 # Transient actions, no DB update
@@ -382,3 +394,32 @@ async def upload_image(file: UploadFile = File(...)):
             await out_file.write(content)
 
         return {"url": f"/uploads/{filename}"}
+
+class BoardAccessUpdate(BaseModel):
+    token: str
+    public_access: str
+
+@app.put("/boards/{board_id}/access")
+async def update_board_access(board_id: str, access_update: BoardAccessUpdate, db: AsyncSession = Depends(get_db)):
+    if access_update.public_access not in ["edit", "view"]:
+        raise HTTPException(status_code=400, detail="Invalid access level")
+
+    payload = decode_access_token(access_update.token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    nickname = payload.get("sub")
+
+    result = await db.execute(select(Board).filter(Board.id == board_id))
+    board = result.scalars().first()
+
+    if not board:
+        raise HTTPException(status_code=404, detail="Board not found")
+
+    if board.owner_username != nickname:
+        raise HTTPException(status_code=403, detail="Only the board owner can change access settings")
+
+    board.public_access = access_update.public_access
+    await db.commit()
+
+    return {"status": "success", "public_access": board.public_access}
