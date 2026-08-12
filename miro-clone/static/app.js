@@ -6,6 +6,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const authError = document.getElementById("auth-error");
     const boardIdInput = document.getElementById("board-id-input");
     const nicknameInput = document.getElementById("nickname-input");
+
+    // Check URL parameters for board ID
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlBoardId = urlParams.get('board');
+    if (urlBoardId) {
+        boardIdInput.value = urlBoardId;
+    }
     const toolbar = document.getElementById("toolbar");
     const canvasContainer = document.getElementById("canvas-container");
     const chatPanel = document.getElementById("chat-panel");
@@ -24,6 +31,8 @@ document.addEventListener("DOMContentLoaded", () => {
     let nickname;
     let boardId = "default";
     let isProcessingSync = false;
+    let canEdit = true;
+    let isOwner = false;
     let isUndoRedo = false;
     let undoStack = [];
     let redoStack = [];
@@ -129,7 +138,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     localStorage.setItem("token", data.access_token);
 
                     loginModal.style.display = "none";
-                    toolbar.style.display = "flex";
                     canvasContainer.style.display = "block";
                     document.getElementById("minimap-container").style.display = "block";
                     document.getElementById("chat-panel").style.display = "flex";
@@ -414,9 +422,30 @@ document.addEventListener("DOMContentLoaded", () => {
             const message = JSON.parse(event.data);
 
             if (message.type === "init") {
+                // Set access controls
+                canEdit = message.can_edit;
+                isOwner = message.is_owner;
+
+                if (!canEdit) {
+                    toolbar.classList.add("hidden");
+                    document.getElementById("properties-panel").style.display = "none";
+                    canvas.selection = false;
+                } else {
+                    toolbar.classList.remove("hidden");
+                }
+
+                if (isOwner) {
+                    document.getElementById("share-access-container").style.display = "block";
+                    document.getElementById("share-access-select").value = message.public_access || "edit";
+                }
+
                 // Load existing shapes
                 isProcessingSync = true;
                 message.data.forEach(shapeData => {
+                    if (!canEdit) {
+                        shapeData.selectable = false;
+                        shapeData.evented = false;
+                    }
                     addShapeToCanvas(shapeData);
                 });
                 isProcessingSync = false;
@@ -1080,6 +1109,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function addShapeToCanvas(shapeData) {
+        if (!canEdit) {
+            shapeData.selectable = false;
+            shapeData.evented = false;
+        }
         fabric.util.enlivenObjects([shapeData], (objects) => {
             const origRenderOnAddRemove = canvas.renderOnAddRemove;
             canvas.renderOnAddRemove = false;
@@ -1399,3 +1432,71 @@ function handleSelection(opt) {
         return canvas.getObjects().find(obj => obj.id === id);
     }
 });
+
+    // --- Share Logic ---
+    const shareModal = document.getElementById("share-modal");
+    const btnShare = document.getElementById("btn-share");
+    const closeShareBtn = document.getElementById("close-share-btn");
+    const copyShareBtn = document.getElementById("copy-share-btn");
+    const shareLinkInput = document.getElementById("share-link-input");
+    const saveAccessBtn = document.getElementById("save-access-btn");
+    const shareAccessSelect = document.getElementById("share-access-select");
+    const shareMsg = document.getElementById("share-msg");
+
+    if (btnShare) {
+        btnShare.addEventListener("click", () => {
+            shareLinkInput.value = window.location.origin + "/?board=" + boardId;
+            shareModal.style.display = "flex";
+            shareMsg.style.display = "none";
+        });
+    }
+
+    if (closeShareBtn) {
+        closeShareBtn.addEventListener("click", () => {
+            shareModal.style.display = "none";
+        });
+    }
+
+    if (copyShareBtn) {
+        copyShareBtn.addEventListener("click", () => {
+            shareLinkInput.select();
+            document.execCommand("copy");
+            shareMsg.style.display = "block";
+        });
+    }
+
+    if (saveAccessBtn) {
+        saveAccessBtn.addEventListener("click", async () => {
+            const token = localStorage.getItem("token");
+            if (!token) return;
+
+            const access = shareAccessSelect.value;
+            try {
+                const res = await fetch(`/boards/${boardId}/access`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        token: token,
+                        public_access: access
+                    })
+                });
+
+                if (res.ok) {
+                    shareMsg.textContent = "Settings saved!";
+                    shareMsg.style.display = "block";
+                    setTimeout(() => {
+                        shareMsg.textContent = "Copied to clipboard!";
+                        shareMsg.style.display = "none";
+                    }, 2000);
+                } else {
+                    const data = await res.json();
+                    alert("Failed to save settings: " + (data.detail || "Unknown error"));
+                }
+            } catch (err) {
+                console.error("Error saving access settings", err);
+                alert("Failed to save settings");
+            }
+        });
+    }

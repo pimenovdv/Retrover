@@ -30,6 +30,10 @@ body, html {
     align-items: center;
 }
 
+#toolbar.hidden {
+    display: none !important;
+}
+
 #toolbar button {
     padding: 8px 12px;
     font-size: 13px;

@@ -82,3 +82,55 @@ async def test_initialization(setup_db_sync):
             assert shape["text"] == "hello"
             assert shape["fontSize"] == 12
             assert shape["stroke"] == "black"
+
+def test_board_access_control(setup_db_sync):
+    client = TestClient(app)
+    # Register user1
+    client.post("/register", json={"username": "user1", "password": "password"})
+    res = client.post("/login", json={"username": "user1", "password": "password"})
+    user1_token = res.json()["access_token"]
+
+    # Register a second user
+    client.post("/register", json={"username": "user2", "password": "password"})
+    res = client.post("/login", json={"username": "user2", "password": "password"})
+    user2_token = res.json()["access_token"]
+
+    board_id = "test_board_access"
+
+    # User 1 connects, creates board, becomes owner
+    with client.websocket_connect(f"/ws/{board_id}/user1?token={user1_token}") as ws1:
+        data = ws1.receive_json()
+        assert data["type"] == "init"
+        assert data["can_edit"] is True
+        assert data["is_owner"] is True
+
+        # User 1 changes access to view
+        res = client.put(f"/boards/{board_id}/access", json={"token": user1_token, "public_access": "view"})
+        assert res.status_code == 200
+
+        # User 2 tries to change access (should fail)
+        res = client.put(f"/boards/{board_id}/access", json={"token": user2_token, "public_access": "edit"})
+        assert res.status_code == 403
+
+        # User 2 connects
+        with client.websocket_connect(f"/ws/{board_id}/user2?token={user2_token}") as ws2:
+            data2 = ws2.receive_json()
+            assert data2["type"] == "init"
+            assert data2["can_edit"] is False
+            assert data2["is_owner"] is False
+
+            # User 2 tries to add a shape
+            ws2.send_json({
+                "action": "add",
+                "object": {"id": "shape1", "type": "rect", "left": 10, "top": 10, "width": 50, "height": 50}
+            })
+
+            # Allow some time for processing
+            import time
+            time.sleep(0.5)
+
+            # Re-connect to check if shape was saved (it shouldn't be)
+            with client.websocket_connect(f"/ws/{board_id}/user1?token={user1_token}") as ws1_check:
+                data3 = ws1_check.receive_json()
+                # Empty board because user2's addition was dropped
+                assert len(data3["data"]) == 0

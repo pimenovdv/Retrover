@@ -26,7 +26,7 @@
     </div>
 
     <!-- Toolbar -->
-    <div id="toolbar" style="display: none;">
+    <div id="toolbar" class="hidden">
         <button id="btn-rect">Add Rectangle</button>
         <button id="btn-circle">Add Circle</button>
         <button id="btn-text">Add Text</button>
@@ -53,6 +53,28 @@
         <button id="btn-export">Export</button>
         <div class="separator"></div>
         <label><input type="checkbox" id="chk-grid-snap"> Snap to Grid</label>
+        <div class="separator"></div>
+        <button id="btn-share">Share</button>
+    </div>
+
+    <!-- Share Modal -->
+    <div id="share-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h2>Share Board</h2>
+            <p>Copy the link below to share this board:</p>
+            <input type="text" id="share-link-input" readonly style="width: 100%; margin-bottom: 10px;" />
+            <div id="share-access-container" style="display: none; margin-bottom: 10px;">
+                <label for="share-access-select">Public Access:</label>
+                <select id="share-access-select">
+                    <option value="edit">Anyone with link can edit</option>
+                    <option value="view">Anyone with link can view</option>
+                </select>
+                <button id="save-access-btn" style="margin-left: 10px;">Save Settings</button>
+            </div>
+            <div id="share-msg" style="color: green; margin-bottom: 10px; display: none;">Copied to clipboard!</div>
+            <button id="copy-share-btn">Copy Link</button>
+            <button id="close-share-btn">Close</button>
+        </div>
     </div>
 
     <!-- Properties Panel -->

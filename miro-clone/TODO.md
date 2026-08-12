@@ -1,8 +1,8 @@
 # TODO for Miro Clone
 
 ## Completed Features
-- Core functionality, UI/tooling, collaboration, basic shapes/tools, undo/redo, rotation, background image support, and user authentication.
+- Core functionality, collaboration, basic shapes, undo/redo, authentication, and board sharing access control.
 
 ## To-Do
-- [ ] Implement board sharing links and access control (view vs edit).
 - [ ] Add rich text formatting support for sticky notes and text objects.
+- [ ] Add grouping and ungrouping support for multiple objects.

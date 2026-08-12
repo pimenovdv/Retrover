@@ -61,4 +61,8 @@ def test_unauthenticated_ws_rejected(client):
             with client.websocket_connect("/ws/default/testuser"):
                 pass
     finally:
-        os.environ["TESTING"] = "1" # Restore
+        os.environ["TESTING"] = "1" # Restoreimport pytest
+from src.auth import verify_password
+
+def test_verify_password():
+    assert verify_password("wrong", "$2b$12$KIXeW3n4Y1QhU0Yd1.1Q3.V/z9/k936.pT.H/uNf/J2qV7uV5aLp2") == False
