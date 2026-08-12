@@ -1,10 +1,7 @@
-import uuid
-import asyncio
-import json
-import logging
 import os
 import threading
 import time
+import uuid
 
 import pytest
 import uvicorn
@@ -15,11 +12,13 @@ os.environ["TESTING"] = "1"
 
 from src.main import app
 
+
 def run_server():
     # Run the uvicorn server in a separate thread
     config = uvicorn.Config(app, host="127.0.0.1", port=8000, log_level="warning")
     server = uvicorn.Server(config)
     server.run()
+
 
 @pytest.fixture(scope="module")
 def test_server():
@@ -30,10 +29,12 @@ def test_server():
     # No direct clean way to stop uvicorn in a thread easily without modifying it,
     # but since thread is daemon=True, it will die with the process.
 
+
 @pytest.mark.asyncio
-@pytest.mark.skipif(os.environ.get('CI') == 'true', reason="Skipping UI tests in CI")
+@pytest.mark.skipif(os.environ.get("CI") == "true", reason="Skipping UI tests in CI")
 async def test_background_image(test_server):
     from playwright.async_api import async_playwright
+
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         page = await browser.new_page()
@@ -62,7 +63,9 @@ async def test_background_image(test_server):
             os.makedirs("tests")
         with open(dummy_img_path, "wb") as f:
             # Minimal 1x1 png
-            f.write(b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\x0cIDAT\x08\xd7c\xf8\xff\xff?\x00\x05\xfe\x02\xfe\xa7\x35\x81\x84\x00\x00\x00\x00IEND\xaeB`\x82')
+            f.write(
+                b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\x0cIDAT\x08\xd7c\xf8\xff\xff?\x00\x05\xfe\x02\xfe\xa7\x35\x81\x84\x00\x00\x00\x00IEND\xaeB`\x82"
+            )
 
         # Intercept file chooser
         async with page.expect_file_chooser() as fc_info:
@@ -74,29 +77,31 @@ async def test_background_image(test_server):
         await page.wait_for_timeout(2000)
 
         # Evaluate canvas state to check for background image
-        bg_objects = await page.evaluate('''() => {
+        bg_objects = await page.evaluate("""() => {
             return window.canvas.getObjects().filter(o => o.is_background === true).map(o => ({
                 is_background: o.is_background,
                 selectable: o.selectable,
                 evented: o.evented,
                 z_index: o.z_index
             }));
-        }''')
+        }""")
 
-        assert len(bg_objects) == 1, f"Expected 1 background object, found {len(bg_objects)}"
+        assert (
+            len(bg_objects) == 1
+        ), f"Expected 1 background object, found {len(bg_objects)}"
         bg = bg_objects[0]
-        assert bg['is_background'] is True
-        assert bg['selectable'] is False
-        assert bg['evented'] is False
-        assert bg['z_index'] == -9999
+        assert bg["is_background"] is True
+        assert bg["selectable"] is False
+        assert bg["evented"] is False
+        assert bg["z_index"] == -9999
 
         # Now clear the background
         await page.click("#btn-clear-bg")
         await page.wait_for_timeout(1000)
 
-        bg_objects_after = await page.evaluate('''() => {
+        bg_objects_after = await page.evaluate("""() => {
             return window.canvas.getObjects().filter(o => o.is_background === true);
-        }''')
+        }""")
         assert len(bg_objects_after) == 0, "Background should be removed"
 
         await browser.close()

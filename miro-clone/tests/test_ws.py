@@ -1,12 +1,15 @@
-import pytest
 import os
+
+import pytest
+
 os.environ["TESTING"] = "1"
 import asyncio
-from fastapi.testclient import TestClient
-import json
 
-from src.main import app
+from fastapi.testclient import TestClient
+
 from src.database import Base, engine
+from src.main import app
+
 
 @pytest.fixture(autouse=True, scope="module")
 def setup_db_sync():
@@ -36,14 +39,24 @@ def test_ws_coverage():
             data = ws.receive_json()
             assert data["type"] == "init"
 
-            ws.send_json({
-                "action": "add",
-                "object": {
-                    "id": "obj1",
-                    "type": "rect",
-                    "left": 0, "top": 0, "width": 100, "height": 100, "fill": "red", "radius": 5, "text": "hello", "fontSize": 12, "z_index": 0
+            ws.send_json(
+                {
+                    "action": "add",
+                    "object": {
+                        "id": "obj1",
+                        "type": "rect",
+                        "left": 0,
+                        "top": 0,
+                        "width": 100,
+                        "height": 100,
+                        "fill": "red",
+                        "radius": 5,
+                        "text": "hello",
+                        "fontSize": 12,
+                        "z_index": 0,
+                    },
                 }
-            })
+            )
 
             # test concurrent connection to trigger the board fetch and shape load
             with client.websocket_connect("/ws/new_board/user2") as ws2:
@@ -60,12 +73,25 @@ def test_ws_coverage():
 @pytest.mark.asyncio
 async def test_initialization(setup_db_sync):
     from src.main import db_batcher
-    await db_batcher.push("add", {
-        "id": "new_sync_obj",
-        "type": "rect",
-        "left": 0, "top": 0, "width": 100, "height": 100, "fill": "red", "radius": 5, "text": "hello", "fontSize": 12, "z_index": 0,
-        "stroke": "black"
-    }, board_id="init_board")
+
+    await db_batcher.push(
+        "add",
+        {
+            "id": "new_sync_obj",
+            "type": "rect",
+            "left": 0,
+            "top": 0,
+            "width": 100,
+            "height": 100,
+            "fill": "red",
+            "radius": 5,
+            "text": "hello",
+            "fontSize": 12,
+            "z_index": 0,
+            "stroke": "black",
+        },
+        board_id="init_board",
+    )
     await db_batcher.process_batch()
 
     os.environ["TESTING"] = "1"
