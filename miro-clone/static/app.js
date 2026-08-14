@@ -486,11 +486,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
         document.getElementById("btn-text").addEventListener("click", () => {
             const id = uuidv4();
-            const text = new fabric.IText('Hello World', {
+            const text = new fabric.Textbox('Hello World', {
                 left: 300,
                 top: 300,
                 fontSize: 40,
                 fill: 'blue',
+                width: 250,
+                splitByGrapheme: true,
                 id: id
             });
             canvas.add(text);
@@ -516,15 +518,17 @@ document.addEventListener("DOMContentLoaded", () => {
                     offsetY: 2
                 })
             });
-            const text = new fabric.IText('Sticky Note', {
+            const text = new fabric.Textbox('Sticky Note', {
                 left: 75,
                 top: 75,
+                width: 130,
                 fontSize: 20,
                 fill: '#333333',
                 fontFamily: 'Arial',
                 originX: 'center',
                 originY: 'center',
-                textAlign: 'center'
+                textAlign: 'center',
+                splitByGrapheme: true
             });
 
             const group = new fabric.Group([rect, text], {
@@ -658,16 +662,30 @@ document.addEventListener("DOMContentLoaded", () => {
              const group = canvas.getActiveObject();
              const groupId = group.id;
 
-             // Convert group to activeSelection BEFORE sending updates
-             // so they have absolute coordinates in their .left / .top
+             // Extract true absolute coordinates manually before toActiveSelection changes state
+             const objectsToAdd = [];
+             group.getObjects().forEach(obj => {
+                 const matrix = obj.calcTransformMatrix();
+                 const point = fabric.util.qrDecompose(matrix);
+
+                 if (!obj.id) obj.id = uuidv4();
+
+                 const objData = obj.toObject(['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background']);
+                 objData.left = point.translateX;
+                 objData.top = point.translateY;
+                 objData.scaleX = point.scaleX;
+                 objData.scaleY = point.scaleY;
+                 objData.angle = point.angle;
+
+                 objectsToAdd.push(objData);
+             });
+
              const activeSelection = group.toActiveSelection();
 
              ws.send(JSON.stringify({ action: 'remove', object: { id: groupId } }));
 
-             activeSelection.getObjects().forEach(obj => {
-                 if (!obj.id) obj.id = uuidv4();
-                 // Now obj.left / obj.top are absolute coordinates
-                 ws.send(JSON.stringify({ action: 'add', object: obj.toObject(['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background']) }));
+             objectsToAdd.forEach(objData => {
+                 ws.send(JSON.stringify({ action: 'add', object: objData }));
              });
 
              canvas.requestRenderAll();
@@ -1226,12 +1244,24 @@ document.addEventListener("DOMContentLoaded", () => {
     const propStrokeWidth = document.getElementById("prop-stroke-width");
     const propFontFamily = document.getElementById("prop-font-family");
     const propAngle = document.getElementById("prop-angle");
+    const propTextFormats = document.getElementById("prop-text-formats");
+    const btnBold = document.getElementById("btn-bold");
+    const btnItalic = document.getElementById("btn-italic");
+    const btnUnderline = document.getElementById("btn-underline");
 
     window.updatePropertiesPanel = function updatePropertiesPanel() {
-        const activeObject = canvas.getActiveObject();
+        let activeObject = canvas.getActiveObject();
         if (!activeObject || activeObject.type === 'activeSelection') {
             propertiesPanel.style.display = 'none';
             return;
+        }
+
+        // If it's a group, look for a text child to show text formatting tools
+        let textObject = null;
+        if (activeObject.type === 'i-text' || activeObject.type === 'text' || activeObject.type === 'textbox') {
+            textObject = activeObject;
+        } else if (activeObject.type === 'group') {
+            textObject = activeObject.getObjects().find(o => o.type === 'i-text' || o.type === 'text' || o.type === 'textbox');
         }
 
         propertiesPanel.style.display = 'flex';
@@ -1242,11 +1272,17 @@ document.addEventListener("DOMContentLoaded", () => {
         if (activeObject.strokeWidth !== undefined) propStrokeWidth.value = activeObject.strokeWidth;
         if (activeObject.angle !== undefined) propAngle.value = Math.round(activeObject.angle);
 
-        if (activeObject.type === 'i-text' || activeObject.type === 'text') {
+        if (textObject) {
             propFontFamily.parentElement.style.display = 'flex';
-            if (activeObject.fontFamily) propFontFamily.value = activeObject.fontFamily;
+            propTextFormats.style.display = 'block';
+            if (textObject.fontFamily) propFontFamily.value = textObject.fontFamily;
+
+            btnBold.style.backgroundColor = textObject.fontWeight === 'bold' ? '#ccc' : '';
+            btnItalic.style.backgroundColor = textObject.fontStyle === 'italic' ? '#ccc' : '';
+            btnUnderline.style.backgroundColor = textObject.underline ? '#ccc' : '';
         } else {
             propFontFamily.parentElement.style.display = 'none';
+            propTextFormats.style.display = 'none';
         }
     }
 
@@ -1344,6 +1380,42 @@ function handleSelection(opt) {
 
         propAngle.addEventListener('input', (e) => applyPropertyChange('angle', parseFloat(e.target.value)));
         propAngle.addEventListener('change', (e) => applyPropertyChange('angle', parseFloat(e.target.value)));
+
+        function applyTextFormat(formatType) {
+            let activeObj = canvas.getActiveObject();
+            if (!activeObj || activeObj.type === 'activeSelection') return;
+
+            let textObj = null;
+            if (activeObj.type === 'i-text' || activeObj.type === 'text' || activeObj.type === 'textbox') {
+                textObj = activeObj;
+            } else if (activeObj.type === 'group') {
+                textObj = activeObj.getObjects().find(o => o.type === 'i-text' || o.type === 'text' || o.type === 'textbox');
+            }
+
+            if (textObj) {
+                const originalState = activeObj.toObject(['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background']);
+
+                if (formatType === 'bold') {
+                    textObj.set('fontWeight', textObj.fontWeight === 'bold' ? 'normal' : 'bold');
+                } else if (formatType === 'italic') {
+                    textObj.set('fontStyle', textObj.fontStyle === 'italic' ? 'normal' : 'italic');
+                } else if (formatType === 'underline') {
+                    textObj.set('underline', !textObj.underline);
+                }
+
+                // If active object is a group, we modify the internal text object but need to fire events for the whole group
+                const newState = activeObj.toObject(['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background']);
+                pushHistory('modify', originalState, newState);
+
+                canvas.renderAll();
+                canvas.fire('object:modified', { target: activeObj }); // Triggers WS sync
+                updatePropertiesPanel();
+            }
+        }
+
+        btnBold.addEventListener('click', () => applyTextFormat('bold'));
+        btnItalic.addEventListener('click', () => applyTextFormat('italic'));
+        btnUnderline.addEventListener('click', () => applyTextFormat('underline'));
 
     function handleRemoteUpdate(action, objData, sender) {
         if (action === "disconnect") {
