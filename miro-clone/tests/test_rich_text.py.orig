@@ -1,0 +1,88 @@
+import pytest
+import os
+import threading
+import uvicorn
+import uuid
+
+@pytest.fixture(scope="module", autouse=True)
+def setup_test_env():
+    os.environ["TESTING"] = "1"
+    yield
+    os.environ.pop("TESTING", None)
+
+@pytest.fixture(scope="module")
+def app_server():
+    from src.main import app, db_batcher
+    import asyncio
+
+    # Initialize DB
+    from src.database import Base, engine
+    async def init_db():
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+    asyncio.run(init_db())
+
+    config = uvicorn.Config(app=app, host="127.0.0.1", port=8001, log_level="error")
+    server = uvicorn.Server(config)
+
+    thread = threading.Thread(target=server.run)
+    thread.daemon = True
+    thread.start()
+
+    import time
+    time.sleep(1)
+
+    yield
+
+    server.should_exit = True
+    thread.join(timeout=2)
+    db_batcher.stop()
+
+@pytest.mark.skipif(os.environ.get('CI') == 'true', reason="Skipping UI tests in CI")
+def test_rich_text_formatting(app_server):
+    from playwright.sync_api import sync_playwright, expect
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
+
+        page.goto("http://127.0.0.1:8001/?board=rich_text_test")
+        page.wait_for_timeout(2000)
+
+        # Override to ensure tools are active in test
+        page.evaluate("window.permission = 'edit'")
+        page.evaluate("document.getElementById('toolbar').classList.remove('hidden')")
+        page.evaluate("document.getElementById('properties-panel').classList.remove('hidden')")
+
+        page.evaluate("""
+            const t = new fabric.IText('Rich Text Testing', {
+                left: 300,
+                top: 300,
+                id: 'text1'
+            });
+            window.canvas.add(t);
+            window.canvas.setActiveObject(t);
+            window.canvas.requestRenderAll();
+        """)
+
+        page.wait_for_timeout(500)
+        page.evaluate("document.getElementById('properties-panel').classList.remove('hidden')")
+
+        # Apply Bold
+        page.evaluate("document.getElementById('btn-bold').click()")
+        page.wait_for_timeout(200)
+        is_bold = page.evaluate("window.canvas.getActiveObject().fontWeight")
+        assert is_bold == 'bold', "Text should be bold"
+
+        # Apply Italic
+        page.evaluate("document.getElementById('btn-italic').click()")
+        page.wait_for_timeout(200)
+        is_italic = page.evaluate("window.canvas.getActiveObject().fontStyle")
+        assert is_italic == 'italic', "Text should be italic"
+
+        # Apply Underline
+        page.evaluate("document.getElementById('btn-underline').click()")
+        page.wait_for_timeout(200)
+        is_underline = page.evaluate("window.canvas.getActiveObject().underline")
+        assert is_underline is True, "Text should be underlined"
+
+        browser.close()

@@ -1,0 +1,28 @@
+--- miro-clone/tests/test_rich_text.py
++++ miro-clone/tests/test_rich_text.py
+@@ -79,20 +79,14 @@
+         page.evaluate("document.getElementById('toolbar').classList.remove('hidden')")
+         page.evaluate("document.getElementById('properties-panel').classList.remove('hidden')")
+
+-        page.evaluate("""
+-            const t = new window.fabric.IText('Rich Text Testing', {
+-                left: 300,
+-                top: 300,
+-                id: 'text1'
+-            });
+-            window.canvas.add(t);
+-            window.canvas.setActiveObject(t);
+-            window.canvas.requestRenderAll();
+-        """)
+-
+-        page.wait_for_timeout(500)
+-
+-        # Apply Bold
++        # Click text tool
++        page.click("#text-tool")
++        page.mouse.click(300, 300)
++        page.keyboard.type("Rich Text Testing")
++        page.evaluate("window.canvas.discardActiveObject(); window.canvas.requestRenderAll();")
++        page.evaluate("const objs = window.canvas.getObjects(); window.canvas.setActiveObject(objs[objs.length-1]); window.canvas.requestRenderAll();")
++        page.wait_for_timeout(500)
++

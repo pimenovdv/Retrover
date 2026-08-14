@@ -59,16 +59,15 @@ async def test_board_access_control(setup_db_sync):
     with TestClient(app) as client:
         with client.websocket_connect(f"/ws/{board_id}/owner_user?token={token}") as ws:
             init_msg = ws.receive_text()
-            assert '"can_edit": true' in init_msg
+            assert '"permission":"edit"' in init_msg
 
     # non-owner is view-only (no token or different token)
     other_token = create_access_token({"sub": "other_user"})
     with TestClient(app) as client:
         with client.websocket_connect(f"/ws/{board_id}/other_user?token={other_token}") as ws:
             init_msg = ws.receive_text()
-            assert '"can_edit": false' in init_msg
+            assert '"permission":"view"' in init_msg
 
             # send edit message
             ws.send_text(json.dumps({"type": "update", "id": "1", "data": {}}))
             # it should be ignored (no broadcast back)
-
