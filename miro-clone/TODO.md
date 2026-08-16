@@ -6,5 +6,5 @@
 - Grouping and ungrouping support for multiple objects.
 
 ## To-Do
-- [ ] Support custom board backgrounds
-- [ ] Support exporting board as PDF
+- [x] Support custom board backgrounds
+- [x] Support exporting board as PDF
