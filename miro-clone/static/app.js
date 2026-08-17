@@ -1124,6 +1124,23 @@ document.addEventListener("DOMContentLoaded", () => {
             link.click();
             document.body.removeChild(link);
         });
+
+        document.getElementById("btn-export-pdf").addEventListener("click", () => {
+            const dataURL = canvas.toDataURL({
+                format: 'png',
+                quality: 1
+            });
+
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF({
+                orientation: canvas.width > canvas.height ? 'landscape' : 'portrait',
+                unit: 'px',
+                format: [canvas.width, canvas.height]
+            });
+
+            pdf.addImage(dataURL, 'PNG', 0, 0, canvas.width, canvas.height);
+            pdf.save(`board-${boardId}-export.pdf`);
+        });
     }
 
     function addShapeToCanvas(shapeData) {

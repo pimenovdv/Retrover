@@ -60,4 +60,22 @@ def test_export_image(server):
 
         # Cleanup
         os.remove(download_path)
+
+        # Test PDF export
+        with page.expect_download() as pdf_download_info:
+            page.click("#btn-export-pdf")
+        pdf_download = pdf_download_info.value
+
+        # Check download properties
+        assert pdf_download.suggested_filename == "board-export-test-board-export.pdf"
+
+        # Save and verify the file size
+        pdf_download_path = "/tmp/export_test.pdf"
+        pdf_download.save_as(pdf_download_path)
+        assert os.path.exists(pdf_download_path)
+        assert os.path.getsize(pdf_download_path) > 0
+
+        # Cleanup
+        os.remove(pdf_download_path)
+
         browser.close()
