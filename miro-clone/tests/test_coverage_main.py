@@ -1,11 +1,12 @@
+import os
+import shutil
+import tempfile
+
 import pytest
 from fastapi.testclient import TestClient
-from src.main import app
-from src.main import update_board_access, BoardAccessUpdate
+
 from src.database import AsyncSessionLocal
-import os
-import tempfile
-import shutil
+from src.main import BoardAccessUpdate, app, update_board_access
 
 
 @pytest.fixture(autouse=True)
@@ -139,8 +140,9 @@ async def test_db_batcher_logic():
 
 
 def test_websocket_broadcast_exception():
-    from src.main import manager
     import asyncio
+
+    from src.main import manager
 
     class BadConnection:
         async def send_text(self, text):
@@ -152,8 +154,9 @@ def test_websocket_broadcast_exception():
 
 @pytest.mark.asyncio
 async def test_db_writer_worker():
-    from src.main import db_writer_worker
     import asyncio
+
+    from src.main import db_writer_worker
 
     task = asyncio.create_task(db_writer_worker())
     await asyncio.sleep(1.1)
@@ -166,8 +169,8 @@ async def test_db_writer_worker():
 
 @pytest.mark.asyncio
 async def test_websocket_endpoint_existing_board():
-    from src.models import Shape, Board
     from src.database import AsyncSessionLocal
+    from src.models import Board, Shape
 
     async with AsyncSessionLocal() as session:
         b = Board(id="pre_board", name="Pre Board")
@@ -207,7 +210,7 @@ def test_websocket_exceptions():
             raise WebSocketDisconnect()
 
     with TestClient(app) as client:
-        with client.websocket_connect("/ws/disconnect_board/disc_user") as ws:
+        with client.websocket_connect("/ws/disconnect_board/disc_user"):
             pass
 
 
@@ -288,8 +291,9 @@ async def test_db_batcher_add_add():
 
     db_batcher.process_batch = bad_batch
 
-    from src.main import db_writer_worker
     import asyncio
+
+    from src.main import db_writer_worker
 
     task = asyncio.create_task(db_writer_worker())
     await asyncio.sleep(1.1)
@@ -300,8 +304,6 @@ async def test_db_batcher_add_add():
         pass
 
     db_batcher.process_batch = original_process
-
-
 
 
 @pytest.mark.asyncio
@@ -328,9 +330,11 @@ async def test_update_board_access_invalid_token():
 
 @pytest.mark.asyncio
 async def test_update_board_access_not_found():
-    from fastapi import HTTPException
-    from src.auth import create_access_token
     from datetime import timedelta
+
+    from fastapi import HTTPException
+
+    from src.auth import create_access_token
 
     token = create_access_token({"sub": "user1"}, timedelta(minutes=10))
     async with AsyncSessionLocal() as session:
@@ -345,10 +349,12 @@ async def test_update_board_access_not_found():
 
 @pytest.mark.asyncio
 async def test_update_board_access_not_owner():
+    from datetime import timedelta
+
     from fastapi import HTTPException
+
     from src.auth import create_access_token
     from src.models import Board
-    from datetime import timedelta
 
     token = create_access_token({"sub": "user1"}, timedelta(minutes=10))
     async with AsyncSessionLocal() as session:
@@ -370,13 +376,12 @@ async def test_update_board_access_not_owner():
         await session.commit()
 
 
-
-
 @pytest.mark.asyncio
 async def test_update_board_access_success():
+    from datetime import timedelta
+
     from src.auth import create_access_token
     from src.models import Board
-    from datetime import timedelta
 
     token = create_access_token({"sub": "user1"}, timedelta(minutes=10))
     async with AsyncSessionLocal() as session:
