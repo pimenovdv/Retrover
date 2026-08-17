@@ -1,17 +1,20 @@
-import uuid
-import pytest
 import os
 import threading
 import time
+import uuid
+
+import pytest
 
 # Set TESTING to use fakeredis and avoid production DB leaks
 os.environ["TESTING"] = "1"
 
+
 @pytest.fixture(scope="module")
 def app_server():
     """Runs the FastAPI server in a background thread."""
-    from src.main import app
     import uvicorn
+
+    from src.main import app
 
     config = uvicorn.Config(app, host="127.0.0.1", port=8001, log_level="error")
     server = uvicorn.Server(config)
@@ -28,9 +31,10 @@ def app_server():
     thread.join(timeout=2)
 
 
-@pytest.mark.skipif(os.environ.get('CI') == 'true', reason="Skipping UI tests in CI")
+@pytest.mark.skipif(os.environ.get("CI") == "true", reason="Skipping UI tests in CI")
 def test_eraser_tool(app_server):
-    from playwright.sync_api import sync_playwright, expect
+    from playwright.sync_api import sync_playwright
+
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
@@ -60,11 +64,13 @@ def test_eraser_tool(app_server):
         time.sleep(0.5)
 
         # Check that path was created normally
-        time.sleep(1) # Extra wait for enlivenObjects / ws broadcast
+        time.sleep(1)  # Extra wait for enlivenObjects / ws broadcast
         paths_count = page.evaluate("canvas.getObjects().length")
         assert paths_count > 0, f"Expected path, found {paths_count}"
 
-        is_normal_path = page.evaluate("canvas.getObjects()[0].globalCompositeOperation")
+        is_normal_path = page.evaluate(
+            "canvas.getObjects()[0].globalCompositeOperation"
+        )
         assert is_normal_path == "source-over"
 
         # Now click eraser
@@ -86,11 +92,15 @@ def test_eraser_tool(app_server):
 
         time.sleep(0.5)
 
-        time.sleep(1) # Extra wait
+        time.sleep(1)  # Extra wait
         paths_count_new = page.evaluate("canvas.getObjects().length")
-        assert paths_count_new > paths_count, f"Expected new path, found {paths_count_new}"
+        assert paths_count_new > paths_count, (
+            f"Expected new path, found {paths_count_new}"
+        )
 
-        is_eraser_path = page.evaluate(f"canvas.getObjects()[{paths_count_new - 1}].globalCompositeOperation")
+        is_eraser_path = page.evaluate(
+            f"canvas.getObjects()[{paths_count_new - 1}].globalCompositeOperation"
+        )
         assert is_eraser_path == "destination-out"
 
         # Disable eraser

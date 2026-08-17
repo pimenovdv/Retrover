@@ -1,12 +1,15 @@
-import pytest
 import os
+
+import pytest
+
 os.environ["TESTING"] = "1"
 import asyncio
-from fastapi.testclient import TestClient
-import json
 
-from src.main import app
+from fastapi.testclient import TestClient
+
 from src.database import Base, engine
+from src.main import app
+
 
 @pytest.fixture(autouse=True, scope="module")
 def setup_db_sync():
@@ -36,14 +39,24 @@ def test_ws_coverage():
             data = ws.receive_json()
             assert data["type"] == "init"
 
-            ws.send_json({
-                "action": "add",
-                "object": {
-                    "id": "obj1",
-                    "type": "rect",
-                    "left": 0, "top": 0, "width": 100, "height": 100, "fill": "red", "radius": 5, "text": "hello", "fontSize": 12, "z_index": 0
+            ws.send_json(
+                {
+                    "action": "add",
+                    "object": {
+                        "id": "obj1",
+                        "type": "rect",
+                        "left": 0,
+                        "top": 0,
+                        "width": 100,
+                        "height": 100,
+                        "fill": "red",
+                        "radius": 5,
+                        "text": "hello",
+                        "fontSize": 12,
+                        "z_index": 0,
+                    },
                 }
-            })
+            )
 
             # test concurrent connection to trigger the board fetch and shape load
             with client.websocket_connect("/ws/new_board/user2") as ws2:
@@ -60,12 +73,25 @@ def test_ws_coverage():
 @pytest.mark.asyncio
 async def test_initialization(setup_db_sync):
     from src.main import db_batcher
-    await db_batcher.push("add", {
-        "id": "new_sync_obj",
-        "type": "rect",
-        "left": 0, "top": 0, "width": 100, "height": 100, "fill": "red", "radius": 5, "text": "hello", "fontSize": 12, "z_index": 0,
-        "stroke": "black"
-    }, board_id="init_board")
+
+    await db_batcher.push(
+        "add",
+        {
+            "id": "new_sync_obj",
+            "type": "rect",
+            "left": 0,
+            "top": 0,
+            "width": 100,
+            "height": 100,
+            "fill": "red",
+            "radius": 5,
+            "text": "hello",
+            "fontSize": 12,
+            "z_index": 0,
+            "stroke": "black",
+        },
+        board_id="init_board",
+    )
     await db_batcher.process_batch()
 
     os.environ["TESTING"] = "1"
@@ -82,6 +108,7 @@ async def test_initialization(setup_db_sync):
             assert shape["text"] == "hello"
             assert shape["fontSize"] == 12
             assert shape["stroke"] == "black"
+
 
 def test_board_access_control(setup_db_sync):
     client = TestClient(app)
@@ -105,32 +132,52 @@ def test_board_access_control(setup_db_sync):
         assert data["is_owner"] is True
 
         # User 1 changes access to view
-        res = client.put(f"/boards/{board_id}/access", json={"token": user1_token, "public_access": "view"})
+        res = client.put(
+            f"/boards/{board_id}/access",
+            json={"token": user1_token, "public_access": "view"},
+        )
         assert res.status_code == 200
 
         # User 2 tries to change access (should fail)
-        res = client.put(f"/boards/{board_id}/access", json={"token": user2_token, "public_access": "edit"})
+        res = client.put(
+            f"/boards/{board_id}/access",
+            json={"token": user2_token, "public_access": "edit"},
+        )
         assert res.status_code == 403
 
         # User 2 connects
-        with client.websocket_connect(f"/ws/{board_id}/user2?token={user2_token}") as ws2:
+        with client.websocket_connect(
+            f"/ws/{board_id}/user2?token={user2_token}"
+        ) as ws2:
             data2 = ws2.receive_json()
             assert data2["type"] == "init"
             assert data2["can_edit"] is False
             assert data2["is_owner"] is False
 
             # User 2 tries to add a shape
-            ws2.send_json({
-                "action": "add",
-                "object": {"id": "shape1", "type": "rect", "left": 10, "top": 10, "width": 50, "height": 50}
-            })
+            ws2.send_json(
+                {
+                    "action": "add",
+                    "object": {
+                        "id": "shape1",
+                        "type": "rect",
+                        "left": 10,
+                        "top": 10,
+                        "width": 50,
+                        "height": 50,
+                    },
+                }
+            )
 
             # Allow some time for processing
             import time
+
             time.sleep(0.5)
 
             # Re-connect to check if shape was saved (it shouldn't be)
-            with client.websocket_connect(f"/ws/{board_id}/user1?token={user1_token}") as ws1_check:
+            with client.websocket_connect(
+                f"/ws/{board_id}/user1?token={user1_token}"
+            ) as ws1_check:
                 data3 = ws1_check.receive_json()
                 # Empty board because user2's addition was dropped
                 assert len(data3["data"]) == 0

@@ -1,6 +1,7 @@
-from sqlalchemy import Column, String, Float, Integer, JSON, ForeignKey
-from sqlalchemy.orm import relationship
+from sqlalchemy import JSON, Column, Float, ForeignKey, Integer, String
+
 from .database import Base
+
 
 class User(Base):
     __tablename__ = "users"
@@ -15,14 +16,17 @@ class Board(Base):
     id = Column(String, primary_key=True, index=True)
     name = Column(String, nullable=True)
     owner_username = Column(String, ForeignKey("users.username"), nullable=True)
-    public_access = Column(String, nullable=False, default="edit") # "edit" or "view"
+    public_access = Column(String, nullable=False, default="edit")  # "edit" or "view"
+
 
 class Shape(Base):
     __tablename__ = "shapes"
 
-    id = Column(String, primary_key=True, index=True) # UUID string from frontend
-    board_id = Column(String, ForeignKey("boards.id"), index=True, nullable=False, default="default")
-    type = Column(String, nullable=False) # 'rect', 'circle', 'text', 'i-text', 'image'
+    id = Column(String, primary_key=True, index=True)  # UUID string from frontend
+    board_id = Column(
+        String, ForeignKey("boards.id"), index=True, nullable=False, default="default"
+    )
+    type = Column(String, nullable=False)  # 'rect', 'circle', 'text', 'i-text', 'image'
     z_index = Column(Integer, default=0, nullable=False)
 
     # Common properties

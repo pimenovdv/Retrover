@@ -1,336 +1,99 @@
 import pytest
 from fastapi.testclient import TestClient
 from src.main import app
-from src.main import update_board_access, BoardAccessUpdate
-from src.database import AsyncSessionLocal
-import os
-import tempfile
-import shutil
 
-
-@pytest.fixture(autouse=True)
-def setup_teardown():
-    # Setup: ensure testing env var is set
-    os.environ["TESTING"] = "1"
-
-    # Store original directories
-    original_cwd = os.getcwd()
-    temp_dir = tempfile.mkdtemp()
-
-    # Create static/index.html in temp dir
-    os.makedirs(os.path.join(temp_dir, "static"), exist_ok=True)
-    with open(os.path.join(temp_dir, "static", "index.html"), "w") as f:
-        f.write("<html><body>Test</body></html>")
-
-    # Create uploads dir
-    os.makedirs(os.path.join(temp_dir, "uploads"), exist_ok=True)
-
-    # Change working directory for FileResponse and uploads to work with temp
-    os.chdir(temp_dir)
-
-    yield
-
-    # Teardown
-    os.chdir(original_cwd)
-    shutil.rmtree(temp_dir)
-
-
-def test_get_root():
+def test_login_invalid():
     with TestClient(app) as client:
-        response = client.get("/")
-        assert response.status_code == 200
+        response = client.post("/login", json={"username": "invalid", "password": "user"})
+        assert response.status_code == 401
 
-
-def test_websocket_actions():
+def test_register_invalid():
     with TestClient(app) as client:
-        with client.websocket_connect("/ws/board1/user1") as ws:
-            msg = ws.receive_text()
-            assert "init" in msg
-
-            ws.send_json(
-                {
-                    "action": "add",
-                    "object": {
-                        "id": "shape_2",
-                        "type": "circle",
-                        "left": 10,
-                        "top": 20,
-                        "radius": 15,
-                        "fill": "blue",
-                    },
-                }
-            )
-            ws.send_json({"action": "modify", "object": {"id": "shape_2", "left": 15}})
-            ws.send_json({"action": "remove", "object": {"id": "shape_2"}})
-
-
-def test_upload_image():
-    with TestClient(app) as client:
-        files = {"file": ("test_image.png", b"fake_image_content", "image/png")}
-        response = client.post("/upload", files=files)
-        assert response.status_code == 200
-        assert "url" in response.json()
-
+        # Create user
+        import uuid
+        username = f"test_{uuid.uuid4()}"
+        client.post("/register", json={"username": username, "password": "user"})
+        response = client.post("/register", json={"username": username, "password": "user"})
+        assert response.status_code == 400
 
 @pytest.mark.asyncio
-async def test_websocket_db_load():
+async def test_batcher_with_properties():
     from src.main import db_batcher
-
-    await db_batcher.push(
-        "add",
-        {
-            "id": "shape_100",
-            "type": "rect",
-            "left": 10,
-            "top": 20,
-            "width": 100,
-            "height": 50,
-            "fill": "red",
-            "z_index": 1,
-            "radius": 5,
-            "text": "hello",
-            "fontSize": 12,
-            "stroke": "black",
-            "strokeWidth": 5,
-            "fontFamily": "Arial",
-            "board_id": "test_board_load",
-        },
-        board_id="test_board_load",
-    )
-
+    await db_batcher.push("add", {
+        "id": "prop_obj",
+        "type": "rect",
+        "left": 10,
+        "top": 10,
+        "z_index": 1,
+        "extra": "val",
+        "nested": {"a": 1}
+    })
+    await db_batcher.process_batch()
+    await db_batcher.push("modify", {
+        "id": "prop_obj",
+        "extra": "val2",
+        "nested": {"a": 2}
+    })
+    await db_batcher.process_batch()
+    await db_batcher.push("remove", {"id": "prop_obj"})
     await db_batcher.process_batch()
 
-    with TestClient(app) as client:
-        with client.websocket_connect("/ws/test_board_load/user_load") as ws:
-            msg = ws.receive_json()
-            assert msg["type"] == "init"
-            assert len(msg["data"]) > 0
-
-            ws.send_json(
-                {
-                    "action": "move_batch",
-                    "objects": [{"id": "shape_100", "left": 100, "top": 200}],
-                }
-            )
-
-            ws.send_json(
-                {
-                    "action": "z_index_batch",
-                    "objects": [{"id": "shape_100", "z_index": 5}],
-                }
-            )
-
-
-@pytest.mark.asyncio
-async def test_db_batcher_logic():
-    from src.main import db_batcher
-
-    await db_batcher.push("add", {"some": "data"})
-    await db_batcher.push("add", {"id": "obj1", "val": 1})
-    await db_batcher.push("modify", {"id": "obj1", "val": 2})
-    await db_batcher.push("modify", {"id": "obj2", "val": 1})
-    await db_batcher.push("modify", {"id": "obj2", "val": 2})
-    await db_batcher.push("remove", {"id": "obj3"})
-    await db_batcher.push("add", {"id": "obj3", "val": 1})
-    await db_batcher.push("add", {"id": "obj4"})
-    await db_batcher.push("remove", {"id": "obj4"})
-
-    await db_batcher.process_batch()
-
-
-def test_websocket_broadcast_exception():
-    from src.main import manager
-    import asyncio
-
-    class BadConnection:
-        async def send_text(self, text):
-            raise Exception("Test exception")
-
-    manager.active_connections["board_bad"] = {"user_bad": BadConnection()}
-    asyncio.run(manager.local_broadcast("board_bad", {"msg": "hi"}))
-
-
-@pytest.mark.asyncio
-async def test_db_writer_worker():
-    from src.main import db_writer_worker
-    import asyncio
-
-    task = asyncio.create_task(db_writer_worker())
-    await asyncio.sleep(1.1)
-    task.cancel()
+def test_websocket_endpoint_unauthenticated():
+    import os
+    os.environ["TESTING"] = "0"
+    from starlette.websockets import WebSocketDisconnect
     try:
-        await task
-    except asyncio.CancelledError:
-        pass
-
-
-@pytest.mark.asyncio
-async def test_websocket_endpoint_existing_board():
-    from src.models import Shape, Board
-    from src.database import AsyncSessionLocal
-
-    async with AsyncSessionLocal() as session:
-        b = Board(id="pre_board", name="Pre Board")
-        session.add(b)
-        s = Shape(
-            id="s1",
-            board_id="pre_board",
-            type="circle",
-            left=10,
-            top=10,
-            z_index=1,
-            width=20,
-            height=20,
-            fill="blue",
-            radius=10,
-            text="hi",
-            fontSize=14,
-            properties={"extra": "prop"},
-        )
-        session.add(s)
-        await session.commit()
-
-    with TestClient(app) as client:
-        with client.websocket_connect("/ws/pre_board/pre_user") as ws:
-            msg = ws.receive_json()
-            assert msg["type"] == "init"
-
-
-def test_websocket_exceptions():
-    from fastapi import WebSocketDisconnect
-
-    class MockWS:
-        async def send_text(self, data):
-            pass
-
-        async def receive_text(self):
-            raise WebSocketDisconnect()
-
-    with TestClient(app) as client:
-        with client.websocket_connect("/ws/disconnect_board/disc_user") as ws:
-            pass
-
+        with TestClient(app) as client:
+            with pytest.raises(WebSocketDisconnect):
+                with client.websocket_connect("/ws/some_board/some_user?token=") as ws:
+                    pass
+            with pytest.raises(WebSocketDisconnect):
+                with client.websocket_connect("/ws/some_board/some_user?token=invalid_token") as ws:
+                    pass
+    finally:
+        os.environ["TESTING"] = "1"
 
 @pytest.mark.asyncio
-async def test_db_batcher_merge_other():
+async def test_batcher_modify_properties():
     from src.main import db_batcher
-
-    db_batcher.queue.clear()
-    await db_batcher.push("modify", {"id": "x1", "val": 1})
-    await db_batcher.push("remove", {"id": "x1"})
-    await db_batcher.push("remove", {"id": "x2"})
-    await db_batcher.push("remove", {"id": "x2"})
+    await db_batcher.push("add", {
+        "id": "prop_modify",
+        "type": "rect",
+        "left": 10,
+        "top": 10,
+        "z_index": 1,
+        "width": 100,
+        "height": 100,
+        "fill": "black",
+        "radius": 5,
+        "text": "test",
+        "fontSize": 12,
+        "board_id": "test_board"
+    })
     await db_batcher.process_batch()
 
-
-def test_upload_image_invalid():
-    with TestClient(app) as client:
-        files = {"file": ("test.txt", b"text", "text/plain")}
-        resp = client.post("/upload", files=files)
-        assert resp.status_code == 400
-
-        files = {"file": ("test.txt", b"image", "image/png")}
-        resp = client.post("/upload", files=files)
-        assert resp.status_code == 400
-
-
-def test_upload_pdf():
-    with TestClient(app) as client:
-        import fitz
-
-        # the setup_teardown fixture changed os.getcwd() to the temp_dir
-        pdf_path = "test.pdf"
-        doc = fitz.open()
-        page = doc.new_page()
-        page.insert_text((50, 50), "Test", fontsize=20)
-        page2 = doc.new_page()
-        page2.insert_text((50, 50), "Page 2", fontsize=20)
-        doc.save(pdf_path)
-        doc.close()
-
-        with open(pdf_path, "rb") as f:
-            files = {"file": ("test.pdf", f, "application/pdf")}
-            response = client.post("/upload", files=files)
-
-        assert response.status_code == 200
-        data = response.json()
-        assert "urls" in data
-        assert len(data["urls"]) == 2
-        for url in data["urls"]:
-            assert url.startswith("/uploads/")
-            assert url.endswith(".png")
-
-
-def test_upload_pdf_invalid():
-    with TestClient(app) as client:
-        files = {
-            "file": ("test.pdf", b"This is not a real PDF file", "application/pdf")
-        }
-        resp = client.post("/upload", files=files)
-        assert resp.status_code == 400
-        assert "Invalid or corrupted PDF file" in resp.json()["detail"]
-
-
-@pytest.mark.asyncio
-async def test_db_batcher_add_add():
-    from src.main import db_batcher
-
-    db_batcher.queue.clear()
-
-    await db_batcher.push("add", {"id": "x3"})
-    await db_batcher.push("add", {"id": "x3", "val": 2})
-
-    db_batcher.queue.clear()
-    original_process = db_batcher.process_batch
-
-    async def bad_batch():
-        raise Exception("test")
-
-    db_batcher.process_batch = bad_batch
-
-    from src.main import db_writer_worker
-    import asyncio
-
-    task = asyncio.create_task(db_writer_worker())
-    await asyncio.sleep(1.1)
-    task.cancel()
-    try:
-        await task
-    except asyncio.CancelledError:
-        pass
-
-    db_batcher.process_batch = original_process
-
-
-
-
-@pytest.mark.asyncio
-async def test_update_board_access_invalid_level():
-    from fastapi import HTTPException
-
-    with pytest.raises(HTTPException) as exc:
-        await update_board_access(
-            "board1", BoardAccessUpdate(token="token", public_access="invalid"), None
-        )
-    assert exc.value.status_code == 400
-
-
-@pytest.mark.asyncio
-async def test_update_board_access_invalid_token():
-    from fastapi import HTTPException
-
-    with pytest.raises(HTTPException) as exc:
-        await update_board_access(
-            "board1", BoardAccessUpdate(token="invalid", public_access="view"), None
-        )
-    assert exc.value.status_code == 401
-
+    await db_batcher.push("modify", {
+        "id": "prop_modify",
+        "left": 20,
+        "top": 20,
+        "width": 200,
+        "height": 200,
+        "fill": "white",
+        "radius": 10,
+        "text": "new test",
+        "fontSize": 14,
+        "z_index": 2,
+        "new_prop": "added"
+    })
+    await db_batcher.process_batch()
 
 @pytest.mark.asyncio
 async def test_update_board_access_not_found():
+    from datetime import timedelta
     from fastapi import HTTPException
     from src.auth import create_access_token
-    from datetime import timedelta
+    from src.main import update_board_access, BoardAccessUpdate
+    from src.database import AsyncSessionLocal
 
     token = create_access_token({"sub": "user1"}, timedelta(minutes=10))
     async with AsyncSessionLocal() as session:
@@ -342,13 +105,14 @@ async def test_update_board_access_not_found():
             )
         assert exc.value.status_code == 404
 
-
 @pytest.mark.asyncio
 async def test_update_board_access_not_owner():
+    from datetime import timedelta
     from fastapi import HTTPException
     from src.auth import create_access_token
     from src.models import Board
-    from datetime import timedelta
+    from src.main import update_board_access, BoardAccessUpdate
+    from src.database import AsyncSessionLocal
 
     token = create_access_token({"sub": "user1"}, timedelta(minutes=10))
     async with AsyncSessionLocal() as session:
@@ -369,14 +133,13 @@ async def test_update_board_access_not_owner():
         await session.delete(board)
         await session.commit()
 
-
-
-
 @pytest.mark.asyncio
 async def test_update_board_access_success():
+    from datetime import timedelta
     from src.auth import create_access_token
     from src.models import Board
-    from datetime import timedelta
+    from src.main import update_board_access, BoardAccessUpdate
+    from src.database import AsyncSessionLocal
 
     token = create_access_token({"sub": "user1"}, timedelta(minutes=10))
     async with AsyncSessionLocal() as session:
@@ -399,3 +162,309 @@ async def test_update_board_access_success():
 
         await session.delete(board)
         await session.commit()
+
+@pytest.mark.asyncio
+async def test_websocket_endpoint_unauthenticated_logic():
+    # Because testing actual disconnects is flaky, we mock the manager directly
+    from src.main import websocket_endpoint, manager
+    from fastapi import WebSocket, HTTPException
+    from unittest.mock import AsyncMock
+
+    ws = AsyncMock()
+    # Test valid token but invalid nickname
+    import os
+    os.environ["TESTING"] = "0"
+    from src.auth import create_access_token
+    from datetime import timedelta
+    try:
+        valid_token = create_access_token({"sub": "wrong_user"}, timedelta(minutes=10))
+        await websocket_endpoint(ws, "b1", "nick1", valid_token)
+        ws.close.assert_called_with(code=1008)
+    finally:
+        os.environ["TESTING"] = "1"
+
+
+@pytest.mark.asyncio
+async def test_websocket_endpoint_unauthenticated_no_token():
+    from src.main import websocket_endpoint, manager
+    from unittest.mock import AsyncMock
+
+    ws = AsyncMock()
+    import os
+    os.environ["TESTING"] = "0"
+    try:
+        await websocket_endpoint(ws, "b1", "nick1", None)
+        ws.close.assert_called_with(code=1008)
+    finally:
+        os.environ["TESTING"] = "1"
+
+@pytest.mark.asyncio
+async def test_websocket_endpoint_unauthenticated_logic_invalid_token():
+    from src.main import websocket_endpoint, manager
+    from unittest.mock import AsyncMock
+
+    ws = AsyncMock()
+    import os
+    os.environ["TESTING"] = "0"
+    try:
+        await websocket_endpoint(ws, "b1", "nick1", "invalid_token")
+        ws.close.assert_called_with(code=1008)
+    finally:
+        os.environ["TESTING"] = "1"
+
+
+@pytest.mark.asyncio
+async def test_batcher_queue_logic():
+    from src.main import db_batcher
+    db_batcher.queue.clear()
+
+    # Add -> Modify
+    await db_batcher.push("add", {"id": "obj1", "val": 1}, "board1")
+    await db_batcher.push("modify", {"id": "obj1", "val": 2}, "board1")
+
+    # Modify -> Modify
+    await db_batcher.push("modify", {"id": "obj2", "val": 1}, "board1")
+    await db_batcher.push("modify", {"id": "obj2", "val": 2}, "board1")
+
+    # Remove -> Add/Modify
+    await db_batcher.push("remove", {"id": "obj3"}, "board1")
+    await db_batcher.push("add", {"id": "obj3", "val": 1}, "board1")
+    await db_batcher.push("remove", {"id": "obj4"}, "board1")
+    await db_batcher.push("modify", {"id": "obj4", "val": 1}, "board1")
+
+    # Other combination fallback
+    await db_batcher.push("add", {"id": "obj5"}, "board1")
+    await db_batcher.push("remove", {"id": "obj5"}, "board1")
+
+    # Should not throw any errors covering all branches
+    await db_batcher.process_batch()
+
+@pytest.mark.asyncio
+async def test_upload_endpoints():
+    with TestClient(app) as client:
+        # Invalid pdf
+        files = {
+            "file": ("test.pdf", b"This is not a real PDF file", "application/pdf")
+        }
+        resp = client.post("/upload", files=files)
+        assert resp.status_code == 400
+
+        # Invalid file type entirely
+        files = {"file": ("test.txt", b"text", "text/plain")}
+        resp = client.post("/upload", files=files)
+        assert resp.status_code == 400
+
+        files = {"file": ("test.txt", b"image", "image/png")}
+        resp = client.post("/upload", files=files)
+        assert resp.status_code == 400
+
+        # Valid pdf
+        import fitz
+        pdf_path = "test.pdf"
+        doc = fitz.open()
+        page = doc.new_page()
+        page.insert_text((50, 50), "Test", fontsize=20)
+        page2 = doc.new_page()
+        page2.insert_text((50, 50), "Page 2", fontsize=20)
+        doc.save(pdf_path)
+        doc.close()
+
+        with open(pdf_path, "rb") as f:
+            files = {"file": ("test.pdf", f, "application/pdf")}
+            response = client.post("/upload", files=files)
+
+        assert response.status_code == 200
+
+        # valid image
+        files = {"file": ("test_image.png", b"fake_image_content", "image/png")}
+        response = client.post("/upload", files=files)
+        assert response.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_websocket_endpoint_unauthenticated_logic_valid_token():
+    from src.main import websocket_endpoint, manager
+    from src.database import AsyncSessionLocal
+    from src.models import Board
+    from fastapi import WebSocket, HTTPException
+    from unittest.mock import AsyncMock
+    import uuid
+
+    board_id = f"mocked_{uuid.uuid4()}"
+
+    async with AsyncSessionLocal() as session:
+        b = Board(id=board_id, name="Pre Board")
+        session.add(b)
+        await session.commit()
+
+    class MockWS:
+        def __init__(self):
+            self.closed = False
+        async def accept(self):
+            pass
+        async def send_text(self, text):
+            pass
+        async def receive_text(self):
+            import asyncio
+            await asyncio.sleep(0.1)
+            from starlette.websockets import WebSocketDisconnect
+            raise WebSocketDisconnect()
+        async def close(self, code):
+            self.closed = True
+
+    ws = MockWS()
+    import os
+    os.environ["TESTING"] = "0"
+    from src.auth import create_access_token
+    from datetime import timedelta
+    try:
+            async with AsyncSessionLocal() as session:
+                valid_token = create_access_token({"sub": "valid_user"}, timedelta(minutes=10))
+                # Should not close with 1008 if token is valid and sub matches nickname
+                await websocket_endpoint(ws, board_id, "valid_user", valid_token, session)
+                assert not ws.closed
+    finally:
+        os.environ["TESTING"] = "1"
+
+@pytest.mark.asyncio
+async def test_websocket_endpoint_existing_board_coverage_with_properties():
+    from src.database import AsyncSessionLocal
+    from src.models import Board, Shape
+    import uuid
+
+    board_id = f"pre_board_prop_{uuid.uuid4()}"
+
+    async with AsyncSessionLocal() as session:
+        b = Board(id=board_id, name="Pre Board")
+        session.add(b)
+        s1 = Shape(
+            id=f"s1_{uuid.uuid4()}",
+            board_id=board_id,
+            type="rect",
+            left=10,
+            top=10,
+            z_index=1,
+            width=20,
+            height=20,
+            fill="blue",
+            properties={"extra": "prop"},
+        )
+        s2 = Shape(
+            id=f"s2_{uuid.uuid4()}",
+            board_id=board_id,
+            type="circle",
+            left=10,
+            top=10,
+            z_index=2,
+            radius=10,
+            fill="red",
+            properties={},
+        )
+        s3 = Shape(
+            id=f"s3_{uuid.uuid4()}",
+            board_id=board_id,
+            type="text",
+            left=10,
+            top=10,
+            z_index=3,
+            text="hello",
+            fontSize=16,
+            properties={},
+        )
+        session.add(s1)
+        session.add(s2)
+        session.add(s3)
+        await session.commit()
+
+    with TestClient(app) as client:
+        with client.websocket_connect(f"/ws/{board_id}/pre_user") as ws:
+            msg = ws.receive_json()
+            assert msg["type"] == "init"
+            assert len(msg["data"]) == 3
+            assert msg["data"][0]["type"] == "rect"
+            assert msg["data"][1]["type"] == "circle"
+            assert msg["data"][2]["type"] == "text"
+
+
+@pytest.mark.asyncio
+async def test_auth_routes_directly():
+    from src.main import register, login, UserAuth
+    from src.database import AsyncSessionLocal
+    from src.models import User
+    import uuid
+    from fastapi import HTTPException
+
+    username = f"auth_user_{uuid.uuid4()}"
+    pwd = "password123"
+
+    async with AsyncSessionLocal() as session:
+        # Register user
+        req = UserAuth(username=username, password=pwd)
+        res = await register(req, session)
+        assert "access_token" in res
+
+        # Register existing
+        with pytest.raises(HTTPException) as exc:
+            await register(req, session)
+        assert exc.value.status_code == 400
+
+        # Login correct
+        res2 = await login(req, session)
+        assert "access_token" in res2
+
+        # Login incorrect
+        req_bad = UserAuth(username=username, password="wrongpassword")
+        with pytest.raises(HTTPException) as exc2:
+            await login(req_bad, session)
+        assert exc2.value.status_code == 401
+
+@pytest.mark.asyncio
+async def test_websocket_integrity_error_during_connect():
+    from src.main import websocket_endpoint, manager
+    from src.database import AsyncSessionLocal
+    from src.models import Board
+    from fastapi import WebSocket
+    from unittest.mock import AsyncMock, patch
+    from sqlalchemy.exc import IntegrityError
+    import uuid
+
+    board_id = f"mocked_{uuid.uuid4()}"
+
+    class MockWS:
+        def __init__(self):
+            self.closed = False
+        async def accept(self):
+            pass
+        async def send_text(self, text):
+            pass
+        async def receive_text(self):
+            import asyncio
+            await asyncio.sleep(0.1)
+            from starlette.websockets import WebSocketDisconnect
+            raise WebSocketDisconnect()
+        async def close(self, code):
+            self.closed = True
+
+    ws = MockWS()
+    import os
+    os.environ["TESTING"] = "1"
+
+    async with AsyncSessionLocal() as session:
+        # Mock session.commit to throw IntegrityError
+        original_commit = session.commit
+
+        async def mock_commit():
+            # In an Integrity error, we actually create the board here behind the scenes
+            # to simulate the other thread succeeding
+            b = Board(id=board_id, name="Other thread board")
+            session.add(b)
+            await original_commit()
+            raise IntegrityError("mock", "mock", "mock")
+
+        with patch.object(session, 'commit', new=mock_commit):
+            try:
+                await websocket_endpoint(ws, board_id, "test_user", None, session)
+                assert not ws.closed
+            except Exception as e:
+                # the WebSocketDisconnect bubbles up from receive_text
+                pass

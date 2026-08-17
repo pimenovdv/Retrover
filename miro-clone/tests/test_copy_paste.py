@@ -1,18 +1,20 @@
-import uuid
-import pytest
 import os
 import threading
+import uuid
+
+import pytest
 import uvicorn
-import asyncio
-from fastapi.testclient import TestClient
+
 
 @pytest.fixture(scope="module", autouse=True)
 def setup_test_env():
     os.environ["TESTING"] = "1"
 
+
 @pytest.fixture(scope="module")
 def app_server():
     from src.main import app
+
     config = uvicorn.Config(app=app, host="127.0.0.1", port=8001, log_level="info")
     server = uvicorn.Server(config)
 
@@ -20,16 +22,21 @@ def app_server():
     thread.start()
 
     import time
-    time.sleep(1) # wait for server to start
+
+    time.sleep(1)  # wait for server to start
 
     yield
 
     server.should_exit = True
     thread.join()
 
-@pytest.mark.skipif(os.environ.get('CI') == 'true', reason="Skipping UI tests in CI due to browser deps")
+
+@pytest.mark.skipif(
+    os.environ.get("CI") == "true", reason="Skipping UI tests in CI due to browser deps"
+)
 def test_copy_paste_playwright(app_server):
     from playwright.sync_api import sync_playwright
+
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
@@ -47,7 +54,7 @@ def test_copy_paste_playwright(app_server):
 
         # Add a rectangle
         page.click("#btn-rect")
-        page.wait_for_timeout(1000) # give it time to render and send WS
+        page.wait_for_timeout(1000)  # give it time to render and send WS
 
         # Select the newly added rectangle
         # We can evaluate to select it

@@ -1,15 +1,18 @@
-import uuid
 import os
+import threading
+import uuid
+
 import pytest
 import uvicorn
-import threading
 
 os.environ["TESTING"] = "1"
 
 from src.main import app
 
+
 def run_server():
     uvicorn.run(app, host="127.0.0.1", port=8006, log_level="error")
+
 
 @pytest.fixture(scope="module")
 def server():
@@ -17,13 +20,16 @@ def server():
     thread = threading.Thread(target=run_server, daemon=True)
     thread.start()
     import time
-    time.sleep(1) # wait for server to start
+
+    time.sleep(1)  # wait for server to start
     yield
     # No explicit shutdown needed as it's a daemon thread
 
-@pytest.mark.skipif(os.environ.get('CI') == 'true', reason="Skipping UI tests in CI")
+
+@pytest.mark.skipif(os.environ.get("CI") == "true", reason="Skipping UI tests in CI")
 def test_export_image(server):
     from playwright.sync_api import sync_playwright
+
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
@@ -60,4 +66,19 @@ def test_export_image(server):
 
         # Cleanup
         os.remove(download_path)
+
+        # Test Export PDF
+        with page.expect_download() as download_info_pdf:
+            page.click("#btn-export-pdf")
+        download_pdf = download_info_pdf.value
+
+        assert download_pdf.suggested_filename == "board-export-test-board-export.pdf"
+
+        download_path_pdf = "/tmp/export_test.pdf"
+        download_pdf.save_as(download_path_pdf)
+        assert os.path.exists(download_path_pdf)
+        assert os.path.getsize(download_path_pdf) > 0
+
+        os.remove(download_path_pdf)
+
         browser.close()
