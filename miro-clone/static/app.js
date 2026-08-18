@@ -809,6 +809,8 @@ document.addEventListener("DOMContentLoaded", () => {
              });
         }
 
+        document.getElementById("btn-duplicate")?.addEventListener("click", duplicate);
+
         document.getElementById("btn-clear").addEventListener("click", () => {
             canvas.discardActiveObject();
             canvas.requestRenderAll();
@@ -1001,6 +1003,51 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
 
+
+        window.duplicate = duplicate;
+        function duplicate() {
+            const activeObject = canvas.getActiveObject();
+            if (!activeObject) return;
+
+            // Ignore if we are currently editing text
+            if (activeObject.isEditing) return;
+
+            activeObject.clone((clonedObj) => {
+                canvas.discardActiveObject();
+                clonedObj.set({
+                    left: clonedObj.left + 20,
+                    top: clonedObj.top + 20,
+                    evented: true
+                });
+
+                if (clonedObj.type === 'activeSelection') {
+                    clonedObj.canvas = canvas;
+                    clonedObj.forEachObject((obj) => {
+                        obj.set({
+                            id: uuidv4(),
+                            z_index: getMaxZIndex() + 1
+                        });
+                        canvas.add(obj);
+                        const objData = obj.toObject(['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background']);
+                        ws.send(JSON.stringify({ action: 'add', object: objData }));
+                    });
+                    clonedObj.setCoords();
+                    canvas.setActiveObject(clonedObj);
+                } else {
+                    clonedObj.set({
+                        id: uuidv4(),
+                        z_index: getMaxZIndex() + 1
+                    });
+                    canvas.add(clonedObj);
+                    const objData = clonedObj.toObject(['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background']);
+                    ws.send(JSON.stringify({ action: 'add', object: objData }));
+                    canvas.setActiveObject(clonedObj);
+                }
+                canvas.requestRenderAll();
+                saveHistory();
+            });
+        }
+
         function paste() {
             if (!clipboard) return;
             // Ignore if we are currently editing text
@@ -1067,6 +1114,11 @@ document.addEventListener("DOMContentLoaded", () => {
              if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
                  if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
                  copy();
+                 e.preventDefault();
+
+             } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') {
+                 if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
+                 duplicate();
                  e.preventDefault();
              } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
                  if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
