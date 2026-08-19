@@ -5,5 +5,5 @@
 
 ## To-Do
 - [x] Support duplicating objects via Ctrl+D or Toolbar Button
-- [ ] Clear Board functionality
+- [x] Clear Board functionality
 - [ ] Object Alignment Tools
