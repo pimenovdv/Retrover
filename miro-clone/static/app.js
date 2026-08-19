@@ -816,6 +816,23 @@ document.addEventListener("DOMContentLoaded", () => {
             canvas.requestRenderAll();
         });
 
+        document.getElementById("btn-clear-board").addEventListener("click", () => {
+            if (window.confirm("Are you sure you want to clear the entire board?")) {
+                const objects = canvas.getObjects();
+                if (objects.length > 0) {
+                    const removedObjects = [];
+                    objects.forEach(obj => {
+                        removedObjects.push(obj.toObject(['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background']));
+                        canvas.remove(obj);
+                        ws.send(JSON.stringify({ action: 'remove', object: { id: obj.id } }));
+                    });
+                    pushHistory('remove', removedObjects, null);
+                    canvas.requestRenderAll();
+                    updateMinimap();
+                }
+            }
+        });
+
         // Canvas events -> WebSocket
         canvas.on('object:added', (e) => {
             if (isProcessingSync || isUndoRedo) return;
