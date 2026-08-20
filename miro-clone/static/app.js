@@ -816,6 +816,77 @@ document.addEventListener("DOMContentLoaded", () => {
             canvas.requestRenderAll();
         });
 
+        function alignObjects(alignment) {
+            const activeObject = canvas.getActiveObject();
+            if (!activeObject || activeObject.type !== 'activeSelection') {
+                return;
+            }
+
+            const objects = activeObject.getObjects();
+            if (objects.length < 2) return;
+
+            // Get global bounding box before ungrouping
+            const groupBounds = activeObject.getBoundingRect(true, true);
+
+            // Discard selection so objects return to global coordinates
+            canvas.discardActiveObject();
+
+            const prevData = objects.map(o => o.toObject(['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background']));
+
+            objects.forEach(obj => {
+                const objBounds = obj.getBoundingRect(true, true);
+
+                switch(alignment) {
+                    case 'left':
+                        // We set left, but consider originX
+                        obj.set({ left: groupBounds.left });
+                        break;
+                    case 'center':
+                        obj.set({ left: groupBounds.left + groupBounds.width / 2 - (obj.width * obj.scaleX) / 2 });
+                        break;
+                    case 'right':
+                        obj.set({ left: groupBounds.left + groupBounds.width - (obj.width * obj.scaleX) });
+                        break;
+                    case 'top':
+                        obj.set({ top: groupBounds.top });
+                        break;
+                    case 'middle':
+                        obj.set({ top: groupBounds.top + groupBounds.height / 2 - (obj.height * obj.scaleY) / 2 });
+                        break;
+                    case 'bottom':
+                        obj.set({ top: groupBounds.top + groupBounds.height - (obj.height * obj.scaleY) });
+                        break;
+                }
+                obj.setCoords();
+            });
+
+            const modifiedData = [];
+            objects.forEach(obj => {
+                const objData = obj.toObject(['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background']);
+                modifiedData.push(objData);
+                if (ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({
+                        action: 'modify',
+                        object: objData
+                    }));
+                }
+            });
+
+            pushHistory('align', prevData, modifiedData);
+
+            // Re-select the objects
+            const newSel = new fabric.ActiveSelection(objects, {canvas: canvas});
+            canvas.setActiveObject(newSel);
+            canvas.requestRenderAll();
+        }
+
+        document.getElementById("btn-align-left").addEventListener("click", () => alignObjects('left'));
+        document.getElementById("btn-align-center").addEventListener("click", () => alignObjects('center'));
+        document.getElementById("btn-align-right").addEventListener("click", () => alignObjects('right'));
+        document.getElementById("btn-align-top").addEventListener("click", () => alignObjects('top'));
+        document.getElementById("btn-align-middle").addEventListener("click", () => alignObjects('middle'));
+        document.getElementById("btn-align-bottom").addEventListener("click", () => alignObjects('bottom'));
+
         document.getElementById("btn-clear-board").addEventListener("click", () => {
             if (window.confirm("Are you sure you want to clear the entire board?")) {
                 const objects = canvas.getObjects();
