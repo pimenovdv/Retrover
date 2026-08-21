@@ -86,9 +86,9 @@ async def test_background_image(test_server):
             }));
         }""")
 
-        assert len(bg_objects) == 1, (
-            f"Expected 1 background object, found {len(bg_objects)}"
-        )
+        assert (
+            len(bg_objects) == 1
+        ), f"Expected 1 background object, found {len(bg_objects)}"
         bg = bg_objects[0]
         assert bg["is_background"] is True
         assert bg["selectable"] is False

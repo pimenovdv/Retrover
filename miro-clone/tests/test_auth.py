@@ -8,9 +8,9 @@ os.environ["TESTING"] = "1"
 import asyncio
 import uuid
 
+from src.auth import verify_password
 from src.database import Base, engine
 from src.main import app
-from src.auth import verify_password
 
 
 @pytest.fixture(scope="module")

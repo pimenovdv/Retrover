@@ -25,6 +25,9 @@ document.addEventListener("DOMContentLoaded", () => {
     let lastCursorSend = 0;
 
 
+    const TO_OBJECT_PROPS = ['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background', 'locked', 'lockMovementX', 'lockMovementY', 'lockRotation', 'lockScalingX', 'lockScalingY', 'hasControls'];
+    window.TO_OBJECT_PROPS = TO_OBJECT_PROPS;
+
     let canvas;
     window.canvas = canvas;
     let ws;
@@ -650,7 +653,7 @@ document.addEventListener("DOMContentLoaded", () => {
              group.getObjects().forEach(obj => {
                  ws.send(JSON.stringify({ action: 'remove', object: { id: obj.id } }));
              });
-             ws.send(JSON.stringify({ action: 'add', object: group.toObject(['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background']) }));
+             ws.send(JSON.stringify({ action: 'add', object: group.toObject(TO_OBJECT_PROPS) }));
 
              canvas.requestRenderAll();
         });
@@ -670,7 +673,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
                  if (!obj.id) obj.id = uuidv4();
 
-                 const objData = obj.toObject(['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background']);
+                 const objData = obj.toObject(TO_OBJECT_PROPS);
                  objData.left = point.translateX;
                  objData.top = point.translateY;
                  objData.scaleX = point.scaleX;
@@ -748,7 +751,7 @@ document.addEventListener("DOMContentLoaded", () => {
                              canvas.add(img);
                              canvas.sendToBack(img);
 
-                             const objData = img.toObject(['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background']);
+                             const objData = img.toObject(TO_OBJECT_PROPS);
                              pushHistory('add', null, objData);
 
                              ws.send(JSON.stringify({
@@ -771,7 +774,7 @@ document.addEventListener("DOMContentLoaded", () => {
              if (existingBgs.length > 0) {
                  const removedObjects = [];
                  existingBgs.forEach(bg => {
-                     removedObjects.push(bg.toObject(['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background']));
+                     removedObjects.push(bg.toObject(TO_OBJECT_PROPS));
                      canvas.remove(bg);
                      ws.send(JSON.stringify({ action: 'remove', object: { id: bg.id } }));
                  });
@@ -811,6 +814,46 @@ document.addEventListener("DOMContentLoaded", () => {
 
         document.getElementById("btn-duplicate")?.addEventListener("click", duplicate);
 
+        document.getElementById("btn-lock")?.addEventListener("click", () => {
+            const activeObject = canvas.getActiveObject();
+            if (!activeObject) return;
+
+            const isLocked = activeObject.locked || activeObject.lockMovementX;
+            const newLockedState = !isLocked;
+
+            const originalState = activeObject.toObject(TO_OBJECT_PROPS);
+
+            if (activeObject.type === 'activeSelection') {
+                activeObject.forEachObject((obj) => {
+                    obj.set({
+                        locked: newLockedState,
+                        lockMovementX: newLockedState,
+                        lockMovementY: newLockedState,
+                        lockRotation: newLockedState,
+                        lockScalingX: newLockedState,
+                        lockScalingY: newLockedState,
+                        hasControls: !newLockedState
+                    });
+                });
+            }
+
+            activeObject.set({
+                locked: newLockedState,
+                lockMovementX: newLockedState,
+                lockMovementY: newLockedState,
+                lockRotation: newLockedState,
+                lockScalingX: newLockedState,
+                lockScalingY: newLockedState,
+                hasControls: !newLockedState
+            });
+
+            const newState = activeObject.toObject(TO_OBJECT_PROPS);
+            pushHistory('modify', originalState, newState);
+
+            canvas.fire('object:modified', { target: activeObject });
+            canvas.requestRenderAll();
+        });
+
         document.getElementById("btn-clear").addEventListener("click", () => {
             canvas.discardActiveObject();
             canvas.requestRenderAll();
@@ -831,7 +874,7 @@ document.addEventListener("DOMContentLoaded", () => {
             // Discard selection so objects return to global coordinates
             canvas.discardActiveObject();
 
-            const prevData = objects.map(o => o.toObject(['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background']));
+            const prevData = objects.map(o => o.toObject(TO_OBJECT_PROPS));
 
             objects.forEach(obj => {
                 const objBounds = obj.getBoundingRect(true, true);
@@ -862,7 +905,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const modifiedData = [];
             objects.forEach(obj => {
-                const objData = obj.toObject(['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background']);
+                const objData = obj.toObject(TO_OBJECT_PROPS);
                 modifiedData.push(objData);
                 if (ws.readyState === WebSocket.OPEN) {
                     ws.send(JSON.stringify({
@@ -893,7 +936,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (objects.length > 0) {
                     const removedObjects = [];
                     objects.forEach(obj => {
-                        removedObjects.push(obj.toObject(['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background']));
+                        removedObjects.push(obj.toObject(TO_OBJECT_PROPS));
                         canvas.remove(obj);
                         ws.send(JSON.stringify({ action: 'remove', object: { id: obj.id } }));
                     });
@@ -910,7 +953,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const obj = e.target;
             if (!obj.id) obj.id = uuidv4(); // fallback
 
-            const objData = obj.toObject(['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background']);
+            const objData = obj.toObject(TO_OBJECT_PROPS);
             pushHistory('add', null, objData);
 
             ws.send(JSON.stringify({
@@ -921,10 +964,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
         canvas.on('mouse:down', (e) => {
             if (e.target && e.target.type !== 'activeSelection') {
-                e.target._originalState = e.target.toObject(['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background']);
+                e.target._originalState = e.target.toObject(TO_OBJECT_PROPS);
             } else if (e.target && e.target.type === 'activeSelection') {
                 e.target.getObjects().forEach(o => {
-                    o._originalState = o.toObject(['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background']);
+                    o._originalState = o.toObject(TO_OBJECT_PROPS);
                 });
             }
         });
@@ -963,7 +1006,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     }));
                 });
             } else {
-                const newState = obj.toObject(['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background']);
+                const newState = obj.toObject(TO_OBJECT_PROPS);
                 if (obj._originalState) {
                     pushHistory('modify', obj._originalState, newState);
                     obj._originalState = null;
@@ -1058,7 +1101,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
                             canvas.add(img);
 
-                            const objData = img.toObject(['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background']);
+                            const objData = img.toObject(TO_OBJECT_PROPS);
                             pushHistory('add', null, objData);
                             ws.send(JSON.stringify({
                                 action: 'add',
@@ -1116,7 +1159,7 @@ document.addEventListener("DOMContentLoaded", () => {
                             z_index: getMaxZIndex() + 1
                         });
                         canvas.add(obj);
-                        const objData = obj.toObject(['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background']);
+                        const objData = obj.toObject(TO_OBJECT_PROPS);
                         ws.send(JSON.stringify({ action: 'add', object: objData }));
                     });
                     clonedObj.setCoords();
@@ -1127,12 +1170,12 @@ document.addEventListener("DOMContentLoaded", () => {
                         z_index: getMaxZIndex() + 1
                     });
                     canvas.add(clonedObj);
-                    const objData = clonedObj.toObject(['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background']);
+                    const objData = clonedObj.toObject(TO_OBJECT_PROPS);
                     ws.send(JSON.stringify({ action: 'add', object: objData }));
                     canvas.setActiveObject(clonedObj);
                 }
                 canvas.requestRenderAll();
-                saveHistory();
+
             });
         }
 
@@ -1161,7 +1204,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         const matrix = obj.calcTransformMatrix();
                         const point = fabric.util.qrDecompose(matrix);
 
-                        const objData = obj.toObject(['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background']);
+                        const objData = obj.toObject(TO_OBJECT_PROPS);
                         // Overwrite with absolute coordinates for websocket
                         objData.left = point.translateX;
                         objData.top = point.translateY;
@@ -1183,7 +1226,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         z_index: getMaxZIndex() + 1
                     });
                     canvas.add(clonedObj);
-                    const objData = clonedObj.toObject(['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background']);
+                    const objData = clonedObj.toObject(TO_OBJECT_PROPS);
                     pushHistory('add', null, objData);
                     ws.send(JSON.stringify({
                         action: 'add',
@@ -1223,7 +1266,7 @@ document.addEventListener("DOMContentLoaded", () => {
                      const removedObjects = [];
                      activeObjects.forEach(obj => {
                          if (isProcessingSync) return;
-                         removedObjects.push(obj.toObject(['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background']));
+                         removedObjects.push(obj.toObject(TO_OBJECT_PROPS));
                          ws.send(JSON.stringify({
                              action: 'remove',
                              object: { id: obj.id }
@@ -1278,6 +1321,71 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             pdf.addImage(dataURL, 'PNG', 0, 0, canvas.width, canvas.height);
             pdf.save(`board-${boardId}-export.pdf`);
+        });
+
+        document.getElementById("btn-export-json").addEventListener("click", () => {
+            const objects = canvas.getObjects().map(obj => obj.toObject(TO_OBJECT_PROPS));
+            const jsonString = JSON.stringify(objects, null, 2);
+            const blob = new Blob([jsonString], { type: "application/json" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `board-${boardId}-export.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+
+        document.getElementById("btn-import-json").addEventListener("click", () => {
+            document.getElementById("json-upload-input").click();
+        });
+
+        document.getElementById("json-upload-input").addEventListener("change", (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            if (window.confirm("Importing a JSON file will overwrite the current board. Are you sure you want to continue?")) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    try {
+                        const jsonObjects = JSON.parse(event.target.result);
+
+                        // Clear existing objects first
+                        const existingObjects = canvas.getObjects();
+                        if (existingObjects.length > 0) {
+                            const removedObjects = [];
+                            existingObjects.forEach(obj => {
+                                removedObjects.push(obj.toObject(TO_OBJECT_PROPS));
+                                ws.send(JSON.stringify({ action: 'remove', object: { id: obj.id } }));
+                            });
+                            canvas.clear();
+                            pushHistory('remove', removedObjects, null);
+                        }
+
+                        // Add new objects
+                        fabric.util.enlivenObjects(jsonObjects, function(objects) {
+                            const addedObjects = [];
+                            objects.forEach(function(o) {
+                                // Important: ensure IDs are preserved or generated
+                                if (!o.id) o.id = uuidv4();
+                                canvas.add(o);
+                                const objData = o.toObject(TO_OBJECT_PROPS);
+                                addedObjects.push(objData);
+                                ws.send(JSON.stringify({ action: 'add', object: objData }));
+                            });
+                            canvas.requestRenderAll();
+                            pushHistory('add', null, addedObjects);
+
+                        });
+
+                    } catch (error) {
+                        console.error("Failed to parse JSON", error);
+                        alert("Invalid JSON file.");
+                    }
+                };
+                reader.readAsText(file);
+            }
+            // Reset input value to allow importing the same file again
+            e.target.value = "";
         });
     }
 
@@ -1451,14 +1559,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (prop === 'stroke-width') val = parseInt(val, 10);
 
-            const originalState = activeObject.toObject(['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background']);
+            const originalState = activeObject.toObject(TO_OBJECT_PROPS);
 
             if (prop === 'fill') activeObject.set('fill', val);
             if (prop === 'stroke') activeObject.set('stroke', val);
             if (prop === 'stroke-width') activeObject.set('strokeWidth', val);
             if (prop === 'font-family') activeObject.set('fontFamily', val);
 
-            const newState = activeObject.toObject(['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background']);
+            const newState = activeObject.toObject(TO_OBJECT_PROPS);
             pushHistory('modify', originalState, newState);
 
             canvas.renderAll();
@@ -1548,7 +1656,7 @@ function handleSelection(opt) {
             }
 
             if (textObj) {
-                const originalState = activeObj.toObject(['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background']);
+                const originalState = activeObj.toObject(TO_OBJECT_PROPS);
 
                 if (formatType === 'bold') {
                     textObj.set('fontWeight', textObj.fontWeight === 'bold' ? 'normal' : 'bold');
@@ -1559,7 +1667,7 @@ function handleSelection(opt) {
                 }
 
                 // If active object is a group, we modify the internal text object but need to fire events for the whole group
-                const newState = activeObj.toObject(['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background']);
+                const newState = activeObj.toObject(TO_OBJECT_PROPS);
                 pushHistory('modify', originalState, newState);
 
                 canvas.renderAll();

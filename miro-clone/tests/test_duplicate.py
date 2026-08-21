@@ -2,29 +2,33 @@ import asyncio
 import os
 import threading
 import uuid
+
 import pytest
 from playwright.sync_api import sync_playwright
 
 os.environ["TESTING"] = "1"
 
 import uvicorn
-from fastapi.testclient import TestClient
 
 from src.database import Base, engine
 from src.main import app
+
 
 def run_server():
     config = uvicorn.Config(app, host="127.0.0.1", port=8001, log_level="info")
     server = uvicorn.Server(config)
     server.run()
 
+
 async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
+
 async def drop_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
+
 
 @pytest.fixture(scope="module")
 def test_server():
@@ -35,12 +39,14 @@ def test_server():
     thread = threading.Thread(target=run_server, daemon=True)
     thread.start()
     import time
+
     time.sleep(2)  # wait for server to start
     yield
 
     loop = asyncio.new_event_loop()
     loop.run_until_complete(drop_db())
     loop.close()
+
 
 @pytest.mark.skipif(os.environ.get("CI") == "true", reason="Skipping UI tests in CI")
 def test_duplicate_button_and_shortcut(test_server):

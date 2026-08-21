@@ -72,8 +72,8 @@ def test_minimap(server):
         new_vpt = page.evaluate("window.canvas.viewportTransform")
 
         # Verify viewport changed (panned)
-        assert initial_vpt[4] != new_vpt[4] or initial_vpt[5] != new_vpt[5], (
-            "Viewport should have changed after clicking minimap"
-        )
+        assert (
+            initial_vpt[4] != new_vpt[4] or initial_vpt[5] != new_vpt[5]
+        ), "Viewport should have changed after clicking minimap"
 
         browser.close()

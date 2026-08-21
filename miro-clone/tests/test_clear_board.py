@@ -82,7 +82,9 @@ async def test_clear_board(test_server):
         await page.wait_for_timeout(500)
 
         # Verify objects are restored
-        objects_restored = await page.evaluate("() => window.canvas.getObjects().length")
+        objects_restored = await page.evaluate(
+            "() => window.canvas.getObjects().length"
+        )
         assert objects_restored == 2
 
         # Redo the clear board

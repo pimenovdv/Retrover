@@ -7,8 +7,8 @@ from datetime import timedelta
 from typing import Dict
 
 import aiofiles
-from fastapi import (Depends, FastAPI, File, UploadFile, WebSocket,
-                     WebSocketDisconnect, HTTPException)
+from fastapi import (Depends, FastAPI, File, HTTPException, UploadFile,
+                     WebSocket, WebSocketDisconnect)
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
