@@ -94,9 +94,9 @@ def test_eraser_tool(app_server):
 
         time.sleep(1)  # Extra wait
         paths_count_new = page.evaluate("canvas.getObjects().length")
-        assert paths_count_new > paths_count, (
-            f"Expected new path, found {paths_count_new}"
-        )
+        assert (
+            paths_count_new > paths_count
+        ), f"Expected new path, found {paths_count_new}"
 
         is_eraser_path = page.evaluate(
             f"canvas.getObjects()[{paths_count_new - 1}].globalCompositeOperation"
