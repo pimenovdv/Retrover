@@ -416,6 +416,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
         const token = localStorage.getItem("token") || "";
         ws = new WebSocket(`${protocol}//${window.location.host}/ws/${boardId}/${nickname}?token=${token}`);
+        window.ws = ws; // Expose for testing
 
         ws.onopen = () => {
             console.log("Connected to WS");
@@ -1465,9 +1466,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 const el = document.createElement('div');
                 el.className = 'remote-cursor';
                 el.style.color = color;
+                const initials = sender.substring(0, 2).toUpperCase();
                 el.innerHTML = `
                     <svg viewBox="0 0 16 16"><path d="M0,0 L16,5 L9,8 L13,15 L10,16 L6,9 L1,14 Z"></path></svg>
-                    <div class="remote-cursor-label">${sender}</div>
+                    <div class="remote-cursor-label">
+                        <div class="cursor-avatar" style="color: ${color};">${initials}</div>
+                        <span>${sender}</span>
+                    </div>
                 `;
                 cursorsContainer.appendChild(el);
                 activeUsers[sender] = { color: color, cursorEl: el, x: pos.x, y: pos.y };

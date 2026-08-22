@@ -2,10 +2,10 @@
 
 ## Completed Features
 - Core collaboration functionality (shapes, tools, undo/redo, auth, access control, rich text, groups, custom backgrounds, PDF export, duplication, clear board, alignment).
+- Object locking, board JSON import/export, and user avatars on sticky cursors.
 
 ## To-Do
-- [x] Locking objects (prevent edits)
 
 ### Newly Planned Features
-- [x] Export Board as JSON / Import Board from JSON
-- [ ] User avatars and display names in collaboration session (visible as sticky cursors)
+- [ ] Add a minimap feature to navigate the infinite canvas more easily.
+- [ ] Implement an in-board chat feature for real-time text communication between collaborators.
