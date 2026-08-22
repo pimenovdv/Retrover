@@ -246,9 +246,26 @@ body, html {
     background: currentColor;
     color: white;
     padding: 2px 6px;
-    border-radius: 4px;
+    border-radius: 12px;
     font-size: 12px;
     white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+
+.cursor-avatar {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: white;
+    color: currentColor;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 10px;
 }
 
 /* Responsive styles for mobile devices */

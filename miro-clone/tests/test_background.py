@@ -13,21 +13,22 @@ os.environ["TESTING"] = "1"
 from src.main import app
 
 
-def run_server():
-    # Run the uvicorn server in a separate thread
-    config = uvicorn.Config(app, host="127.0.0.1", port=8000, log_level="warning")
-    server = uvicorn.Server(config)
-    server.run()
-
-
 @pytest.fixture(scope="module")
 def test_server():
-    thread = threading.Thread(target=run_server, daemon=True)
+    import socket
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(("", 0))
+    port = s.getsockname()[1]
+    s.close()
+
+    config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning")
+    server = uvicorn.Server(config)
+    thread = threading.Thread(target=server.run, daemon=True)
     thread.start()
-    time.sleep(2)  # Wait for server to start
-    yield
-    # No direct clean way to stop uvicorn in a thread easily without modifying it,
-    # but since thread is daemon=True, it will die with the process.
+    time.sleep(1)  # Wait for server to start
+    yield port
+    server.should_exit = True
+    thread.join(timeout=2)
 
 
 @pytest.mark.asyncio
@@ -39,7 +40,7 @@ async def test_background_image(test_server):
         browser = await p.chromium.launch(headless=True)
         page = await browser.new_page()
 
-        await page.goto("http://127.0.0.1:8000/")
+        await page.goto(f"http://127.0.0.1:{test_server}/")
 
         # Login
         await page.fill("#board-id-input", "bg_test_board")

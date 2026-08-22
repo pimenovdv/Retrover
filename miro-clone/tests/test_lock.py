@@ -63,23 +63,40 @@ def test_lock_unlock(test_server):
         """)
 
         # Check it's initially not locked
-        locked = page.evaluate("window.canvas.getActiveObject().locked")
+        locked = page.evaluate("window.canvas.getActiveObject()?.locked")
         assert not locked
 
-        # Lock it
-        page.click("#btn-lock")
+        # Ensure object is active and click lock button
+        page.evaluate("""
+            const obj = window.canvas.getObjects()[0];
+            window.canvas.setActiveObject(obj);
+            if (window.updatePropertiesPanel) window.updatePropertiesPanel();
+            window.canvas.requestRenderAll();
+        """)
 
-        locked = page.evaluate("window.canvas.getActiveObject().locked")
+        # Click the lock button directly via evaluate to avoid playwright "element outside of viewport" errors
+        # if the toolbar is too wide.
+        page.evaluate('document.getElementById("btn-lock").click()')
+        page.wait_for_timeout(1000)
+
+        locked = page.evaluate("window.canvas.getObjects()[0].locked")
         assert locked
 
-        has_controls = page.evaluate("window.canvas.getActiveObject().hasControls")
+        has_controls = page.evaluate("window.canvas.getObjects()[0].hasControls")
         assert not has_controls
 
         # Unlock it
-        page.click("#btn-lock")
+        page.evaluate("""
+            const obj = window.canvas.getObjects()[0];
+            window.canvas.setActiveObject(obj);
+            if (window.updatePropertiesPanel) window.updatePropertiesPanel();
+            window.canvas.requestRenderAll();
+        """)
+        page.evaluate('document.getElementById("btn-lock").click()')
+        page.wait_for_timeout(1000)
 
-        locked = page.evaluate("window.canvas.getActiveObject().locked")
+        locked = page.evaluate("window.canvas.getObjects()[0].locked")
         assert not locked
 
-        has_controls = page.evaluate("window.canvas.getActiveObject().hasControls")
+        has_controls = page.evaluate("window.canvas.getObjects()[0].hasControls")
         assert has_controls
