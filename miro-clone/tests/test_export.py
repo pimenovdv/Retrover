@@ -81,4 +81,18 @@ def test_export_image(server):
 
         os.remove(download_path_pdf)
 
+        # Test Export SVG
+        with page.expect_download() as download_info_svg:
+            page.click("#btn-export-svg")
+        download_svg = download_info_svg.value
+
+        assert download_svg.suggested_filename == "board-export-test-board-export.svg"
+
+        download_path_svg = "/tmp/export_test.svg"
+        download_svg.save_as(download_path_svg)
+        assert os.path.exists(download_path_svg)
+        assert os.path.getsize(download_path_svg) > 0
+
+        os.remove(download_path_svg)
+
         browser.close()
