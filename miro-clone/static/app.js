@@ -1324,6 +1324,19 @@ document.addEventListener("DOMContentLoaded", () => {
             pdf.save(`board-${boardId}-export.pdf`);
         });
 
+        document.getElementById("btn-export-svg").addEventListener("click", () => {
+            const svgData = canvas.toSVG();
+            const blob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.download = `board-${boardId}-export.svg`;
+            link.href = url;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        });
+
         document.getElementById("btn-export-json").addEventListener("click", () => {
             const objects = canvas.getObjects().map(obj => obj.toObject(TO_OBJECT_PROPS));
             const jsonString = JSON.stringify(objects, null, 2);
