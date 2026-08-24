@@ -1,10 +1,9 @@
 # TODO for Miro Clone
 
 ## Completed Features
-- Core collaboration, UI enhancements (minimap), and real-time chat.
-- Object locking, board JSON import/export, and user avatars on sticky cursors.
+- Core collaboration, UI enhancements, real-time chat, locking, import/export (JSON, SVG), avatars.
 
 ## To-Do
 
 ### Newly Planned Features
-- [x] Add a feature to export the board as an SVG file.
+- [x] Add an 'Add Image' feature to upload and place standard image objects on the canvas.

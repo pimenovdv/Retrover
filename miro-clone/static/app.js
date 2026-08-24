@@ -696,6 +696,82 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
 
+        const imageUploadInput = document.getElementById("image-upload-input");
+        document.getElementById("btn-image").addEventListener("click", () => {
+             imageUploadInput.click();
+        });
+
+        imageUploadInput.addEventListener("change", async (e) => {
+             if (e.target.files && e.target.files.length > 0) {
+                 const file = e.target.files[0];
+
+                 const formData = new FormData();
+                 formData.append("file", file);
+
+                 try {
+                     const response = await fetch('/upload', {
+                         method: 'POST',
+                         body: formData
+                     });
+                     const data = await response.json();
+
+                     let urlsToLoad = [];
+                     if (data.urls) {
+                         urlsToLoad = data.urls;
+                     } else if (data.url) {
+                         urlsToLoad = [data.url];
+                     }
+
+                     if (urlsToLoad.length > 0) {
+                         let currentY = 100;
+                         const padding = 20;
+
+                         const loadPromises = urlsToLoad.map(url => {
+                             return new Promise((resolve) => {
+                                 fabric.Image.fromURL(url, (img) => {
+                                     const id = uuidv4();
+                                     img.set({
+                                         id: id,
+                                         left: 100,
+                                         top: currentY,
+                                         z_index: canvas.getObjects().length,
+                                         selectable: true,
+                                         evented: true,
+                                         is_background: false
+                                     });
+
+                                     // Add default crossOrigin
+                                     img.crossOrigin = "anonymous";
+
+                                     // Scale down if too large
+                                     if (img.width > 800) {
+                                         img.scaleToWidth(800);
+                                     }
+
+                                     currentY += (img.height * img.scaleY) + padding;
+
+                                     canvas.add(img);
+
+                                     const objData = img.toObject(TO_OBJECT_PROPS);
+                                     pushHistory('add', null, objData);
+                                     ws.send(JSON.stringify({ action: 'add', object: objData }));
+
+                                     resolve(img);
+                                 }, { crossOrigin: 'anonymous' });
+                             });
+                         });
+
+                         await Promise.all(loadPromises);
+                         canvas.renderAll();
+                     }
+                 } catch (err) {
+                     console.error("Error uploading image:", err);
+                     alert("Failed to upload image");
+                 }
+             }
+             imageUploadInput.value = '';
+        });
+
         const bgUploadInput = document.getElementById("bg-upload-input");
 
         document.getElementById("btn-set-bg").addEventListener("click", () => {
