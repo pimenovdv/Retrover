@@ -355,6 +355,25 @@ document.addEventListener("DOMContentLoaded", () => {
             opt.e.stopPropagation();
         });
 
+        // Zoom Controls
+        document.getElementById("btn-zoom-in").addEventListener("click", () => {
+            let zoom = canvas.getZoom();
+            zoom *= 1.2;
+            if (zoom > 20) zoom = 20;
+            canvas.zoomToPoint({ x: canvas.getWidth() / 2, y: canvas.getHeight() / 2 }, zoom);
+        });
+
+        document.getElementById("btn-zoom-out").addEventListener("click", () => {
+            let zoom = canvas.getZoom();
+            zoom /= 1.2;
+            if (zoom < 0.01) zoom = 0.01;
+            canvas.zoomToPoint({ x: canvas.getWidth() / 2, y: canvas.getHeight() / 2 }, zoom);
+        });
+
+        document.getElementById("btn-zoom-reset").addEventListener("click", () => {
+            canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
+        });
+
         // Infinite Canvas: Pan
         let isDragging = false;
         let lastPosX = 0;
