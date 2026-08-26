@@ -143,6 +143,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     loginModal.style.display = "none";
                     canvasContainer.style.display = "block";
                     document.getElementById("minimap-container").style.display = "block";
+                    document.getElementById("zoom-controls").style.display = "flex";
                     document.getElementById("chat-panel").style.display = "flex";
                     initApp();
                 } else {
@@ -1361,6 +1362,16 @@ document.addEventListener("DOMContentLoaded", () => {
              } else if ((e.key === 'y' && (e.ctrlKey || e.metaKey)) || (e.key === 'z' && (e.ctrlKey || e.metaKey) && e.shiftKey)) {
                  e.preventDefault();
                  performRedo();
+             } else if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '+')) {
+                 e.preventDefault();
+                 zoomCanvas(1.1);
+             } else if ((e.ctrlKey || e.metaKey) && e.key === '-') {
+                 e.preventDefault();
+                 zoomCanvas(0.9);
+             } else if ((e.ctrlKey || e.metaKey) && e.key === '0') {
+                 e.preventDefault();
+                 canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
+                 updateMinimap();
              }
         });
 
@@ -1371,6 +1382,24 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("btn-redo").addEventListener("click", () => {
             performRedo();
         });
+
+        // --- Zoom Controls ---
+        function zoomCanvas(factor) {
+            let zoom = canvas.getZoom();
+            zoom *= factor;
+            if (zoom > 20) zoom = 20;
+            if (zoom < 0.01) zoom = 0.01;
+            canvas.zoomToPoint({ x: canvas.getWidth() / 2, y: canvas.getHeight() / 2 }, zoom);
+            updateMinimap();
+        }
+
+        document.getElementById("btn-zoom-in").addEventListener("click", () => zoomCanvas(1.1));
+        document.getElementById("btn-zoom-out").addEventListener("click", () => zoomCanvas(0.9));
+        document.getElementById("btn-zoom-reset").addEventListener("click", () => {
+            canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
+            updateMinimap();
+        });
+        // --- End Zoom Controls ---
 
         document.getElementById("btn-export").addEventListener("click", () => {
             const dataURL = canvas.toDataURL({
