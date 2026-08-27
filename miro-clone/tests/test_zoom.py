@@ -76,12 +76,26 @@ async def test_zoom_controls(test_server):
         zoom_out = await page.evaluate("window.canvas.getZoom()")
         assert zoom_out < zoom_in, f"Zoom should decrease, got {zoom_out}"
 
-        # Test Reset Zoom button
+        # Reset zoom
+        # Pan a little first to test viewport reset
+        await page.evaluate("""() => {
+            let vpt = window.canvas.viewportTransform;
+            vpt[4] = 100; // pan x
+            vpt[5] = 100; // pan y
+            window.canvas.setViewportTransform(vpt);
+        }""")
+        vpt_before = await page.evaluate("() => window.canvas.viewportTransform")
+        assert vpt_before[4] == 100
+
         await page.evaluate('document.getElementById("btn-zoom-reset").click()')
         await page.wait_for_timeout(200)
 
         zoom_reset = await page.evaluate("window.canvas.getZoom()")
         assert zoom_reset == 1.0, f"Zoom should reset to 1.0, got {zoom_reset}"
+
+        vpt_after = await page.evaluate("() => window.canvas.viewportTransform")
+        assert vpt_after[4] == 0
+        assert vpt_after[5] == 0
 
         # Test Keyboard Shortcut Zoom In (Ctrl + =)
         await page.keyboard.press("Control+=")

@@ -54,7 +54,7 @@ def test_minimap(server):
         page.wait_for_selector("#canvas-container", state="visible")
 
         # Add a shape
-        page.click("#btn-rect")
+        page.evaluate('document.getElementById("btn-rect").click()')
         page.wait_for_timeout(500)  # Wait for shape to be added and rendered
 
         # Ensure minimap is visible
@@ -65,7 +65,16 @@ def test_minimap(server):
         initial_vpt = page.evaluate("window.canvas.viewportTransform")
 
         # Click on minimap to pan
-        minimap_container.click(position={"x": 150, "y": 100})
+        page.evaluate("""
+            const e = new MouseEvent("mousedown", {
+                clientX: document.getElementById("minimap-container").getBoundingClientRect().left + 150,
+                clientY: document.getElementById("minimap-container").getBoundingClientRect().top + 100,
+                bubbles: true
+            });
+            document.getElementById("minimap-container").dispatchEvent(e);
+            const e2 = new MouseEvent("mouseup", { bubbles: true });
+            window.dispatchEvent(e2);
+        """)
         page.wait_for_timeout(500)
 
         # Get viewport after click

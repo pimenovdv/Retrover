@@ -76,7 +76,10 @@ def test_lock_unlock(test_server):
 
         # Click the lock button directly via evaluate to avoid playwright "element outside of viewport" errors
         # if the toolbar is too wide.
-        page.evaluate('document.getElementById("btn-lock").click()')
+        page.evaluate("""
+            const lockBtn = document.getElementById("btn-lock");
+            if (lockBtn) lockBtn.click();
+        """)
         page.wait_for_timeout(1000)
 
         locked = page.evaluate("window.canvas.getObjects()[0].locked")
@@ -92,7 +95,10 @@ def test_lock_unlock(test_server):
             if (window.updatePropertiesPanel) window.updatePropertiesPanel();
             window.canvas.requestRenderAll();
         """)
-        page.evaluate('document.getElementById("btn-lock").click()')
+        page.evaluate("""
+            const lockBtn = document.getElementById("btn-lock");
+            if (lockBtn) lockBtn.click();
+        """)
         page.wait_for_timeout(1000)
 
         locked = page.evaluate("window.canvas.getObjects()[0].locked")
