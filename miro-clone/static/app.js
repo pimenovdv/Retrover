@@ -49,6 +49,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (isProcessingSync || isUndoRedo) return;
         undoStack.push({ type: actionType, prev: prevData, next: newData });
         redoStack.length = 0; // Clear redo stack on new action
+        updateHistoryPanel();
     }
 
     function performUndo() {
@@ -56,6 +57,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const action = undoStack.pop();
         redoStack.push(action);
         applyAction(action, true);
+        updateHistoryPanel();
     }
 
     function performRedo() {
@@ -63,10 +65,36 @@ document.addEventListener("DOMContentLoaded", () => {
         const action = redoStack.pop();
         undoStack.push(action);
         applyAction(action, false);
+        updateHistoryPanel();
     }
 
     window.performUndo = performUndo;
     window.performRedo = performRedo;
+
+    function updateHistoryPanel() {
+        const historyList = document.getElementById("history-list");
+        if (!historyList) return;
+        historyList.innerHTML = "";
+
+        // Combine undo and redo stacks for a full view (optional, but requested recent actions)
+        // Let's just show undoStack to keep it simple, or both
+        let allActions = [...undoStack];
+
+        // Show last 20 actions
+        const recentActions = allActions.slice(-20).reverse();
+
+        recentActions.forEach((action, index) => {
+            const li = document.createElement("li");
+            let desc = "Action: " + action.type;
+            if (action.next && action.next.type) {
+                desc += " (" + action.next.type + ")";
+            } else if (action.prev && action.prev.type) {
+                desc += " (" + action.prev.type + ")";
+            }
+            li.textContent = desc;
+            historyList.appendChild(li);
+        });
+    }
 
     function applyAction(action, isUndo) {
         isUndoRedo = true;
@@ -1389,6 +1417,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
         document.getElementById("btn-redo").addEventListener("click", () => {
             performRedo();
+        });
+
+        document.getElementById("btn-history").addEventListener("click", () => {
+            const historyPanel = document.getElementById("history-panel");
+            if (historyPanel.style.display === "none") {
+                historyPanel.style.display = "block";
+                updateHistoryPanel();
+            } else {
+                historyPanel.style.display = "none";
+            }
         });
 
         document.getElementById("btn-export").addEventListener("click", () => {
