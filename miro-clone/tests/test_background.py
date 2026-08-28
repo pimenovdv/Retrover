@@ -16,6 +16,7 @@ from src.main import app
 @pytest.fixture(scope="module")
 def test_server():
     import socket
+
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind(("", 0))
     port = s.getsockname()[1]

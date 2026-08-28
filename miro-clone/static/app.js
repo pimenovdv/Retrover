@@ -1419,6 +1419,13 @@ document.addEventListener("DOMContentLoaded", () => {
             performRedo();
         });
 
+        document.getElementById("btn-dark-mode").addEventListener("click", (e) => {
+            const isDark = document.body.classList.toggle("dark-mode");
+            e.target.textContent = isDark ? "Light Mode" : "Dark Mode";
+            canvas.backgroundColor = isDark ? "#121212" : "#f5f5f5";
+            canvas.renderAll();
+        });
+
         document.getElementById("btn-history").addEventListener("click", () => {
             const historyPanel = document.getElementById("history-panel");
             if (historyPanel.style.display === "none") {

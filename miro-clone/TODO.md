@@ -1,13 +1,13 @@
 # TODO for Miro Clone
 
 ## Completed Features
-- Core collaboration, UI enhancements, real-time chat, locking, import/export (JSON, SVG), avatars, Add Image feature.
+- Core collaboration, UI enhancements, real-time chat, locking, import/export (JSON, SVG), avatars, Add Image feature, Zoom Controls, undo/redo history panel, dark mode toggle.
 
 ## To-Do
 
 ### Newly Planned Features
-- [x] Add Zoom Controls (Zoom In, Zoom Out, Reset View) to the toolbar.
 - [ ] Add support for embedding YouTube/Vimeo videos.
-- [x] Implement an undo/redo history panel showing recent actions.
 - [ ] Add snapping lines / smart guides when moving objects near each other.
-- [ ] Add a dark mode toggle for the UI.
+- [ ] Add templates for common diagrams (e.g. flowcharts, mind maps).
+- [ ] Add a temporary laser pointer tool for presentations.
+- [ ] Add sticky note clustering functionality.
