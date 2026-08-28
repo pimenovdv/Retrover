@@ -1,4 +1,3 @@
-import asyncio
 import os
 import threading
 import uuid
@@ -19,7 +18,9 @@ PORT = 8011
 class ServerThread(threading.Thread):
     def __init__(self, app, host, port):
         super().__init__()
-        self.server = uvicorn.Server(uvicorn.Config(app, host=host, port=port, log_level="error"))
+        self.server = uvicorn.Server(
+            uvicorn.Config(app, host=host, port=port, log_level="error")
+        )
 
     def run(self):
         self.server.run()
@@ -38,7 +39,10 @@ def test_server():
 
 
 @pytest.mark.asyncio
-@pytest.mark.skipif(os.environ.get("CI") == "true", reason="Skipping UI tests in CI due to missing dependencies")
+@pytest.mark.skipif(
+    os.environ.get("CI") == "true",
+    reason="Skipping UI tests in CI due to missing dependencies",
+)
 async def test_history_panel(test_server):
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
@@ -79,6 +83,8 @@ async def test_history_panel(test_server):
         assert count > 0, "History list is empty"
 
         first_item_text = await list_items.nth(0).text_content()
-        assert "Action: add" in first_item_text, f"Expected 'Action: add', got '{first_item_text}'"
+        assert (
+            "Action: add" in first_item_text
+        ), f"Expected 'Action: add', got '{first_item_text}'"
 
         await browser.close()

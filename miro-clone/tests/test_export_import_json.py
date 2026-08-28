@@ -1,20 +1,21 @@
-import pytest
 import os
 import threading
 import time
 import uuid
 
+import pytest
 import uvicorn
-from playwright.sync_api import Page, expect
 
 from src.main import app
+
 
 @pytest.fixture(scope="module")
 def test_server():
     os.environ["TESTING"] = "1"
     import socket
+
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.bind(('', 0))
+    s.bind(("", 0))
     port = s.getsockname()[1]
     s.close()
 
@@ -22,14 +23,16 @@ def test_server():
     server = uvicorn.Server(config)
     thread = threading.Thread(target=server.run)
     thread.start()
-    time.sleep(1) # Wait for server to start
+    time.sleep(1)  # Wait for server to start
     yield port
     server.should_exit = True
     thread.join()
 
-@pytest.mark.skipif(os.environ.get('CI') == 'true', reason="Skipping UI tests in CI")
+
+@pytest.mark.skipif(os.environ.get("CI") == "true", reason="Skipping UI tests in CI")
 def test_export_import_json(test_server, tmp_path):
     from playwright.sync_api import sync_playwright
+
     with sync_playwright() as p:
         browser = p.chromium.launch()
         page = browser.new_page()

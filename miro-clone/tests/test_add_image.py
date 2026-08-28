@@ -14,6 +14,7 @@ from src.main import app
 @pytest.fixture(scope="module")
 def test_server():
     import socket
+
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind(("", 0))
     port = s.getsockname()[1]
@@ -88,7 +89,9 @@ async def test_add_image(test_server):
             }));
         }""")
 
-        assert len(img_objects) == 1, f"Expected 1 image object, found {len(img_objects)}"
+        assert (
+            len(img_objects) == 1
+        ), f"Expected 1 image object, found {len(img_objects)}"
         img = img_objects[0]
         assert img["is_background"] is False
         assert img["selectable"] is True

@@ -72,13 +72,15 @@ def test_avatars(server):
         """)
 
         # Wait for the cursor to appear on user1's screen
-        cursor_label = page1.wait_for_selector(".remote-cursor-label", state="visible", timeout=5000)
+        cursor_label = page1.wait_for_selector(
+            ".remote-cursor-label", state="visible", timeout=5000
+        )
         assert cursor_label is not None
 
         # Check if avatar exists and has correct initials
         avatar = cursor_label.query_selector(".cursor-avatar")
         assert avatar is not None
-        assert avatar.inner_text() == "US" # "US" from "User2"
+        assert avatar.inner_text() == "US"  # "US" from "User2"
 
         # Check text content of the span (username)
         username_span = cursor_label.query_selector("span")

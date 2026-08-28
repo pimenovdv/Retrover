@@ -380,3 +380,82 @@ body, html {
     margin-bottom: 10px;
     font-size: 16px;
 }
+
+/* Dark Mode Styles */
+body.dark-mode {
+    background-color: #121212;
+    color: #e0e0e0;
+}
+
+body.dark-mode #toolbar,
+body.dark-mode .modal-content,
+body.dark-mode #chat-panel,
+body.dark-mode #history-panel,
+body.dark-mode #properties-panel {
+    background: #1e1e1e;
+    color: #e0e0e0;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+    border: 1px solid #333;
+}
+
+body.dark-mode #toolbar button {
+    background: #2d2d2d;
+    color: #e0e0e0;
+    border: 1px solid #444;
+}
+
+body.dark-mode #toolbar button:hover {
+    background: #3d3d3d;
+}
+
+body.dark-mode .prop-group label {
+    color: #bbb;
+}
+
+body.dark-mode .prop-group input[type="number"],
+body.dark-mode .prop-group select,
+body.dark-mode .modal-content input,
+body.dark-mode #chat-input,
+body.dark-mode #share-link-input {
+    background: #2d2d2d;
+    color: #e0e0e0;
+    border: 1px solid #444;
+}
+
+body.dark-mode .separator {
+    background-color: #444;
+}
+
+body.dark-mode #minimap-container {
+    background: #1e1e1e;
+    border: 1px solid #333;
+}
+
+body.dark-mode #minimap-viewport {
+    border: 2px solid rgba(255, 255, 255, 0.6);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+body.dark-mode .chat-message {
+    background: #2d2d2d;
+    color: #e0e0e0;
+}
+
+body.dark-mode .chat-message strong {
+    color: #aaa;
+}
+
+body.dark-mode #chat-input-container {
+    background: #1e1e1e;
+    border-top: 1px solid #333;
+}
+
+body.dark-mode #history-list li {
+    border-bottom: 1px solid #333;
+}
+
+body.dark-mode .modal-content h2,
+body.dark-mode .modal-content p,
+body.dark-mode #history-panel h3 {
+    color: #e0e0e0;
+}

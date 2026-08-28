@@ -201,7 +201,6 @@ async def test_websocket_endpoint_unauthenticated_logic():
     # Because testing actual disconnects is flaky, we mock the manager directly
     from unittest.mock import AsyncMock
 
-
     from src.main import websocket_endpoint
 
     ws = AsyncMock()
@@ -329,7 +328,6 @@ async def test_upload_endpoints():
 @pytest.mark.asyncio
 async def test_websocket_endpoint_unauthenticated_logic_valid_token():
     import uuid
-
 
     from src.database import AsyncSessionLocal
     from src.main import websocket_endpoint
