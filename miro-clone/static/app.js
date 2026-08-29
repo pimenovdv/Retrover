@@ -23,6 +23,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let activeUsers = {};
     let lastCursorSend = 0;
+    let lastLaserSend = 0;
 
 
     const TO_OBJECT_PROPS = ['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background', 'locked', 'lockMovementX', 'lockMovementY', 'lockRotation', 'lockScalingX', 'lockScalingY', 'hasControls'];
@@ -40,8 +41,10 @@ document.addEventListener("DOMContentLoaded", () => {
     let undoStack = [];
     let redoStack = [];
     let isEraserMode = false;
+    let isLaserMode = false;
 
     window.isEraserMode = isEraserMode;
+    window.isLaserMode = isLaserMode;
     window.undoStack = undoStack;
     window.redoStack = redoStack;
 
@@ -661,21 +664,43 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const btnFreehand = document.getElementById("btn-freehand");
         const btnEraser = document.getElementById("btn-eraser");
+        const btnLaser = document.getElementById("btn-laser");
 
         btnFreehand.addEventListener("click", () => {
              isEraserMode = false;
+             isLaserMode = false;
              window.isEraserMode = isEraserMode;
+             window.isLaserMode = isLaserMode;
              canvas.isDrawingMode = !canvas.isDrawingMode;
              btnFreehand.style.backgroundColor = canvas.isDrawingMode ? '#ccc' : '#f0f0f0';
              btnEraser.style.backgroundColor = '#f0f0f0';
+             btnLaser.style.backgroundColor = '#f0f0f0';
         });
 
         btnEraser.addEventListener("click", () => {
              isEraserMode = !isEraserMode;
+             isLaserMode = false;
              window.isEraserMode = isEraserMode;
+             window.isLaserMode = isLaserMode;
              canvas.isDrawingMode = isEraserMode;
              btnEraser.style.backgroundColor = isEraserMode ? '#ccc' : '#f0f0f0';
              btnFreehand.style.backgroundColor = '#f0f0f0';
+             btnLaser.style.backgroundColor = '#f0f0f0';
+        });
+
+        btnLaser.addEventListener("click", () => {
+             isLaserMode = !isLaserMode;
+             isEraserMode = false;
+             window.isLaserMode = isLaserMode;
+             window.isEraserMode = isEraserMode;
+             canvas.isDrawingMode = false;
+             btnLaser.style.backgroundColor = isLaserMode ? '#ccc' : '#f0f0f0';
+             btnFreehand.style.backgroundColor = '#f0f0f0';
+             btnEraser.style.backgroundColor = '#f0f0f0';
+             if (isLaserMode) {
+                 canvas.discardActiveObject();
+                 canvas.requestRenderAll();
+             }
         });
 
         // Add ID to freehand paths
@@ -1590,6 +1615,44 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         // Cursor Logic
+        window.drawLaserPoint = function(x, y, color) {
+            const circle = new fabric.Circle({
+                left: x,
+                top: y,
+                radius: 5,
+                fill: color || 'red',
+                opacity: 0.8,
+                originX: 'center',
+                originY: 'center',
+                selectable: false,
+                evented: false,
+                is_background: true // Avoid history tracking
+            });
+            canvas.add(circle);
+
+            // Animate opacity and then remove
+            circle.animate('opacity', 0, {
+                duration: 1000,
+                onChange: canvas.requestRenderAll.bind(canvas),
+                onComplete: () => {
+                    canvas.remove(circle);
+                }
+            });
+        };
+
+        let isLaserDrawing = false;
+        canvas.on('mouse:down', function(opt) {
+            if (isLaserMode) {
+                isLaserDrawing = true;
+            }
+        });
+
+        canvas.on('mouse:up', function(opt) {
+            if (isLaserMode) {
+                isLaserDrawing = false;
+            }
+        });
+
         canvas.on('mouse:move', (opt) => {
             if (ws.readyState !== WebSocket.OPEN) return;
             const now = Date.now();
@@ -1600,6 +1663,23 @@ document.addEventListener("DOMContentLoaded", () => {
                     object: { x: pointer.x, y: pointer.y }
                 }));
                 lastCursorSend = now;
+            }
+
+            if (isLaserMode && isLaserDrawing) {
+                if (now - lastLaserSend > 50) {
+                    const pointer = canvas.getPointer(opt.e);
+                    // Draw locally
+                    const userColor = activeUsers[nickname] ? activeUsers[nickname].color : 'red';
+                    window.drawLaserPoint(pointer.x, pointer.y, userColor);
+                    // Broadcast laser action
+                    if (ws.readyState === WebSocket.OPEN) {
+                        ws.send(JSON.stringify({
+                            action: 'laser',
+                            object: { x: pointer.x, y: pointer.y, color: userColor }
+                        }));
+                    }
+                    lastLaserSend = now;
+                }
             }
         });
 
@@ -1860,6 +1940,13 @@ function handleSelection(opt) {
 
         if (action === "cursor") {
             updateRemoteCursor(sender, objData);
+            return;
+        }
+
+        if (action === "laser") {
+            if (window.drawLaserPoint) {
+                window.drawLaserPoint(objData.x, objData.y, objData.color);
+            }
             return;
         }
 
