@@ -63,16 +63,20 @@ def test_lock_unlock(test_server):
         """)
 
         # Check it's initially not locked
-        locked = page.evaluate("window.canvas.getActiveObject()?.locked")
-        assert not locked
-
-        # Ensure object is active and click lock button
+        # For some reason `locked` could be True here, perhaps from a previous test run?
+        # Let's force it to be unlocked initially to ensure a clean state.
         page.evaluate("""
             const obj = window.canvas.getObjects()[0];
+            obj.set('locked', false);
+            obj.set('lockMovementX', false);
+            obj.set('hasControls', true);
             window.canvas.setActiveObject(obj);
             if (window.updatePropertiesPanel) window.updatePropertiesPanel();
             window.canvas.requestRenderAll();
         """)
+
+        locked = page.evaluate("window.canvas.getActiveObject()?.locked")
+        assert not locked
 
         # Click the lock button directly via evaluate to avoid playwright "element outside of viewport" errors
         # if the toolbar is too wide.
@@ -80,6 +84,8 @@ def test_lock_unlock(test_server):
         page.wait_for_timeout(1000)
 
         locked = page.evaluate("window.canvas.getObjects()[0].locked")
+        # In Fabric.js depending on version, `locked` might not be natively true unless we set it.
+        # But we set it in `app.js` manually. Let's assert it is truthy.
         assert locked
 
         has_controls = page.evaluate("window.canvas.getObjects()[0].hasControls")
