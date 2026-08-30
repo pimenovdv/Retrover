@@ -10,4 +10,4 @@
 - [ ] Add snapping lines / smart guides when moving objects near each other.
 - [ ] Add templates for common diagrams (e.g. flowcharts, mind maps).
 - [x] Add a temporary laser pointer tool for presentations.
-- [ ] Add sticky note clustering functionality.
+- [x] Add sticky note clustering functionality.

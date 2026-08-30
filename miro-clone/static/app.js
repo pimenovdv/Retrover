@@ -555,6 +555,67 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
 
+        document.getElementById("btn-cluster-stickies").addEventListener("click", () => {
+            if (!canEdit) return;
+
+            // Find all stickies on the board
+            const allObjects = canvas.getObjects();
+            const stickies = allObjects.filter(obj => {
+                if (obj.type !== 'group') return false;
+                const objectsInGroup = obj.getObjects();
+                const hasRect = objectsInGroup.some(child => child.type === 'rect' && child.fill === '#FFFF88');
+                const hasText = objectsInGroup.some(child => child.type === 'textbox');
+                return hasRect && hasText;
+            });
+
+            if (stickies.length <= 1) return; // Nothing to cluster
+
+            // Use the first sticky's coordinates as the starting point for the cluster
+            const startX = stickies[0].left;
+            const startY = stickies[0].top;
+
+            // Sort stickies to have a consistent order (optional, by creation time or just arbitrary)
+            // Default array order is fine.
+
+            const padding = 20;
+            const stickyWidth = stickies[0].width;
+            const stickyHeight = stickies[0].height;
+
+            const cols = Math.ceil(Math.sqrt(stickies.length)); // Try to make a square grid
+
+            const prevStates = [];
+            const nextStates = [];
+
+            stickies.forEach((sticky, index) => {
+                prevStates.push(sticky.toObject(TO_OBJECT_PROPS));
+
+                const row = Math.floor(index / cols);
+                const col = index % cols;
+
+                const newLeft = startX + (col * (stickyWidth + padding));
+                const newTop = startY + (row * (stickyHeight + padding));
+
+                sticky.set({ left: newLeft, top: newTop });
+                sticky.setCoords();
+
+                nextStates.push(sticky.toObject(TO_OBJECT_PROPS));
+
+                // Broadcast modifications
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({
+                        action: 'modify',
+                        object: sticky.toObject(TO_OBJECT_PROPS)
+                    }));
+                }
+            });
+
+            canvas.renderAll();
+            updatePropertiesPanel();
+
+            // Push history for bulk modify
+            pushHistory('modify', prevStates, nextStates);
+        });
+
         document.getElementById("btn-sticky").addEventListener("click", () => {
             const id = uuidv4();
             const rect = new fabric.Rect({
