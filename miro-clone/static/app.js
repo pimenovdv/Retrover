@@ -207,6 +207,8 @@ document.addEventListener("DOMContentLoaded", () => {
         });
         window.canvas = canvas;
 
+        initSmartGuides();
+
         // Resize handling
 
     // --- Minimap Logic ---
@@ -2141,3 +2143,107 @@ function handleSelection(opt) {
             }
         });
     }
+
+function initSmartGuides() {
+    let guideLines = [];
+    let isSmartGuidesEnabled = false;
+    const chkSmartGuides = document.getElementById("chk-smart-guides");
+
+    if (chkSmartGuides) {
+        chkSmartGuides.addEventListener("change", (e) => {
+            isSmartGuidesEnabled = e.target.checked;
+        });
+    }
+
+    canvas.on('object:moving', function(e) {
+        if (!isSmartGuidesEnabled) return;
+
+        const obj = e.target;
+        const objects = canvas.getObjects().filter(o => o !== obj && o.visible !== false && !o.is_background && o.type !== 'activeSelection');
+
+        guideLines = [];
+        const threshold = 10;
+        let snappedX = false;
+        let snappedY = false;
+
+        const objBounds = obj.getBoundingRect();
+        const objCenterX = objBounds.left + objBounds.width / 2;
+        const objCenterY = objBounds.top + objBounds.height / 2;
+
+        for (let target of objects) {
+            const tBounds = target.getBoundingRect();
+            const tCenterX = tBounds.left + tBounds.width / 2;
+            const tCenterY = tBounds.top + tBounds.height / 2;
+
+            // X-axis snapping (centers)
+            if (!snappedX && Math.abs(objCenterX - tCenterX) < threshold) {
+                obj.left = tCenterX - (objBounds.width / 2);
+                snappedX = true;
+                guideLines.push({ x1: tCenterX, y1: Math.min(objBounds.top, tBounds.top), x2: tCenterX, y2: Math.max(objBounds.top + objBounds.height, tBounds.top + tBounds.height) });
+            }
+
+            // Y-axis snapping (centers)
+            if (!snappedY && Math.abs(objCenterY - tCenterY) < threshold) {
+                obj.top = tCenterY - (objBounds.height / 2);
+                snappedY = true;
+                guideLines.push({ x1: Math.min(objBounds.left, tBounds.left), y1: tCenterY, x2: Math.max(objBounds.left + objBounds.width, tBounds.left + tBounds.width), y2: tCenterY });
+            }
+
+            // Snapping left edge to left edge
+            if (!snappedX && Math.abs(objBounds.left - tBounds.left) < threshold) {
+                obj.left = tBounds.left;
+                snappedX = true;
+                guideLines.push({ x1: tBounds.left, y1: Math.min(objBounds.top, tBounds.top), x2: tBounds.left, y2: Math.max(objBounds.top + objBounds.height, tBounds.top + tBounds.height) });
+            }
+
+            // Snapping right edge to right edge
+            if (!snappedX && Math.abs((objBounds.left + objBounds.width) - (tBounds.left + tBounds.width)) < threshold) {
+                obj.left = tBounds.left + tBounds.width - objBounds.width;
+                snappedX = true;
+                guideLines.push({ x1: tBounds.left + tBounds.width, y1: Math.min(objBounds.top, tBounds.top), x2: tBounds.left + tBounds.width, y2: Math.max(objBounds.top + objBounds.height, tBounds.top + tBounds.height) });
+            }
+
+            // Snapping top edge to top edge
+            if (!snappedY && Math.abs(objBounds.top - tBounds.top) < threshold) {
+                obj.top = tBounds.top;
+                snappedY = true;
+                guideLines.push({ x1: Math.min(objBounds.left, tBounds.left), y1: tBounds.top, x2: Math.max(objBounds.left + objBounds.width, tBounds.left + tBounds.width), y2: tBounds.top });
+            }
+
+            // Snapping bottom edge to bottom edge
+            if (!snappedY && Math.abs((objBounds.top + objBounds.height) - (tBounds.top + tBounds.height)) < threshold) {
+                obj.top = tBounds.top + tBounds.height - objBounds.height;
+                snappedY = true;
+                guideLines.push({ x1: Math.min(objBounds.left, tBounds.left), y1: tBounds.top + tBounds.height, x2: Math.max(objBounds.left + objBounds.width, tBounds.left + tBounds.width), y2: tBounds.top + tBounds.height });
+            }
+        }
+    });
+
+    canvas.on('after:render', function() {
+        if (!isSmartGuidesEnabled || guideLines.length === 0) return;
+        const ctx = canvas.getContext();
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([5, 5]);
+
+        // Handle viewport transform (zoom/pan)
+        const vpt = canvas.viewportTransform;
+        ctx.transform(vpt[0], vpt[1], vpt[2], vpt[3], vpt[4], vpt[5]);
+
+        for (let line of guideLines) {
+            ctx.beginPath();
+            ctx.moveTo(line.x1, line.y1);
+            ctx.lineTo(line.x2, line.y2);
+            ctx.stroke();
+        }
+        ctx.restore();
+    });
+
+    canvas.on('mouse:up', function() {
+        if (guideLines.length > 0) {
+            guideLines = [];
+            canvas.requestRenderAll();
+        }
+    });
+}

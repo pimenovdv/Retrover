@@ -7,7 +7,7 @@
 
 ### Newly Planned Features
 - [ ] Add support for embedding YouTube/Vimeo videos.
-- [ ] Add snapping lines / smart guides when moving objects near each other.
+- [x] Add snapping lines / smart guides when moving objects near each other.
 - [ ] Add templates for common diagrams (e.g. flowcharts, mind maps).
 - [x] Add a temporary laser pointer tool for presentations.
 - [x] Add sticky note clustering functionality.
