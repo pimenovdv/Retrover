@@ -26,7 +26,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let lastLaserSend = 0;
 
 
-    const TO_OBJECT_PROPS = ['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background', 'locked', 'lockMovementX', 'lockMovementY', 'lockRotation', 'lockScalingX', 'lockScalingY', 'hasControls'];
+    const TO_OBJECT_PROPS = ['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background', 'locked', 'lockMovementX', 'lockMovementY', 'lockRotation', 'lockScalingX', 'lockScalingY', 'hasControls', 'videoSrc'];
     window.TO_OBJECT_PROPS = TO_OBJECT_PROPS;
 
     let canvas;
@@ -836,6 +836,60 @@ document.addEventListener("DOMContentLoaded", () => {
              imageUploadInput.click();
         });
 
+        document.getElementById("btn-embed").addEventListener("click", () => {
+             if (!canEdit) return;
+             let url = prompt("Enter YouTube or Vimeo URL:");
+             if (!url) return;
+
+             if (!url.startsWith("http://") && !url.startsWith("https://")) {
+                 url = "https://" + url;
+             }
+
+             let embedUrl = "";
+             try {
+                 if (url.includes("youtube.com/watch?v=")) {
+                     const videoId = new URL(url).searchParams.get("v");
+                     embedUrl = `https://www.youtube.com/embed/${videoId}`;
+                 } else if (url.includes("youtu.be/")) {
+                     const videoId = url.split("youtu.be/")[1].split("?")[0];
+                     embedUrl = `https://www.youtube.com/embed/${videoId}`;
+                 } else if (url.includes("vimeo.com/")) {
+                     const videoId = url.split("vimeo.com/")[1].split("?")[0];
+                     embedUrl = `https://player.vimeo.com/video/${videoId}`;
+                 } else {
+                     alert("Invalid or unsupported URL. Please use YouTube or Vimeo.");
+                     return;
+                 }
+             } catch (e) {
+                 alert("Invalid URL format.");
+                 return;
+             }
+
+             const id = uuidv4();
+             const vpt = canvas.viewportTransform;
+             const x = (canvas.width / 2 - vpt[4]) / vpt[0];
+             const y = (canvas.height / 2 - vpt[5]) / vpt[3];
+
+             const rect = new fabric.Rect({
+                 left: x,
+                 top: y,
+                 width: 560,
+                 height: 315,
+                 fill: 'rgba(0,0,0,0)',
+                 stroke: '#333',
+                 strokeDashArray: [5, 5],
+                 id: id,
+                 videoSrc: embedUrl,
+                 originX: 'left',
+                 originY: 'top'
+             });
+
+             canvas.add(rect);
+             canvas.setActiveObject(rect);
+             updatePropertiesPanel();
+             // The object:added event will handle syncing and history
+        });
+
         imageUploadInput.addEventListener("change", async (e) => {
              if (e.target.files && e.target.files.length > 0) {
                  const file = e.target.files[0];
@@ -1158,6 +1212,57 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             }
         });
+
+        const iframeContainer = document.getElementById("iframe-container");
+
+        function updateIframes() {
+             const objects = canvas.getObjects();
+
+             // Find all DOM iframes currently rendered
+             const existingIframes = Array.from(iframeContainer.children);
+             const activeVideoIds = new Set();
+
+             objects.forEach(obj => {
+                 if (obj.videoSrc) {
+                     activeVideoIds.add(obj.id);
+                     let iframe = document.getElementById(`video-${obj.id}`);
+
+                     if (!iframe) {
+                         iframe = document.createElement('iframe');
+                         iframe.id = `video-${obj.id}`;
+                         iframe.src = obj.videoSrc;
+                         iframe.frameBorder = "0";
+                         iframe.allowFullscreen = true;
+                         iframe.style.position = 'absolute';
+                         iframe.style.pointerEvents = 'auto';
+                         iframe.style.transformOrigin = '0 0';
+                         iframeContainer.appendChild(iframe);
+                     }
+
+                     // Update position
+                     const zoom = canvas.getZoom();
+                     const vpt = canvas.viewportTransform;
+                     const matrix = obj.calcTransformMatrix();
+                     const finalMatrix = fabric.util.multiplyTransformMatrices(vpt, matrix);
+                     const point = fabric.util.qrDecompose(finalMatrix);
+
+                     iframe.style.transform = `translate(${point.translateX}px, ${point.translateY}px) rotate(${point.angle}deg) scale(${point.scaleX}, ${point.scaleY})`;
+                     iframe.style.width = obj.width + 'px';
+                     iframe.style.height = obj.height + 'px';
+                     iframe.style.display = obj.visible !== false ? 'block' : 'none';
+                 }
+             });
+
+             // Remove any iframes that no longer have a corresponding fabric object
+             existingIframes.forEach(iframe => {
+                 const id = iframe.id.replace('video-', '');
+                 if (!activeVideoIds.has(id)) {
+                     iframe.remove();
+                 }
+             });
+        }
+
+        canvas.on('after:render', updateIframes);
 
         // Canvas events -> WebSocket
         canvas.on('object:added', (e) => {
