@@ -777,7 +777,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
 
-        document.getElementById("btn-group").addEventListener("click", () => {
+        function groupSelection() {
              if (!canvas.getActiveObject()) return;
              if (canvas.getActiveObject().type !== 'activeSelection') return;
 
@@ -792,7 +792,46 @@ document.addEventListener("DOMContentLoaded", () => {
              ws.send(JSON.stringify({ action: 'add', object: group.toObject(TO_OBJECT_PROPS) }));
 
              canvas.requestRenderAll();
-        });
+        }
+
+        function ungroupSelection() {
+             if (!canvas.getActiveObject()) return;
+             if (canvas.getActiveObject().type !== 'group') return;
+
+             const group = canvas.getActiveObject();
+             const groupId = group.id;
+
+             // Extract true absolute coordinates manually before toActiveSelection changes state
+             const objectsToAdd = [];
+             group.getObjects().forEach(obj => {
+                 const matrix = obj.calcTransformMatrix();
+                 const point = fabric.util.qrDecompose(matrix);
+
+                 if (!obj.id) obj.id = uuidv4();
+
+                 const objData = obj.toObject(TO_OBJECT_PROPS);
+                 objData.left = point.translateX;
+                 objData.top = point.translateY;
+                 objData.scaleX = point.scaleX;
+                 objData.scaleY = point.scaleY;
+                 objData.angle = point.angle;
+
+                 objectsToAdd.push(objData);
+             });
+
+             const activeSelection = group.toActiveSelection();
+
+             ws.send(JSON.stringify({ action: 'remove', object: { id: groupId } }));
+
+             objectsToAdd.forEach(objData => {
+                 ws.send(JSON.stringify({ action: 'add', object: objData }));
+             });
+
+             canvas.requestRenderAll();
+        }
+
+        document.getElementById("btn-group").addEventListener("click", groupSelection);
+        document.getElementById("btn-ungroup").addEventListener("click", ungroupSelection);
 
         document.getElementById("btn-ungroup").addEventListener("click", () => {
              if (!canvas.getActiveObject()) return;
@@ -1558,8 +1597,16 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         }
 
-        window.addEventListener('keydown', (e) => {
-             if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
+                window.addEventListener('keydown', (e) => {
+             if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'g') {
+                 if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
+                 if (e.shiftKey) {
+                     ungroupSelection();
+                 } else {
+                     groupSelection();
+                 }
+                 e.preventDefault();
+             } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
                  if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
                  copy();
                  e.preventDefault();

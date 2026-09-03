@@ -1,6 +1,7 @@
 import os
 import threading
 import uuid
+
 import pytest
 import uvicorn
 from playwright.sync_api import sync_playwright
@@ -8,14 +9,16 @@ from playwright.sync_api import sync_playwright
 os.environ["TESTING"] = "1"
 from src.main import app
 
+
 @pytest.fixture(scope="module")
 def server():
     config = uvicorn.Config(app, host="127.0.0.1", port=0, log_level="error")
     server = uvicorn.Server(config)
 
     import socket
+
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.bind(('', 0))
+    s.bind(("", 0))
     port = s.getsockname()[1]
     s.close()
 
@@ -25,12 +28,14 @@ def server():
     thread.start()
 
     import time
-    time.sleep(1) # wait for server to start
+
+    time.sleep(1)  # wait for server to start
 
     yield port
 
     server.should_exit = True
     thread.join(timeout=2)
+
 
 @pytest.mark.skipif(os.environ.get("CI") == "true", reason="Skip UI tests in CI")
 def test_embed_video(server):
@@ -50,7 +55,9 @@ def test_embed_video(server):
         page.wait_for_selector("#canvas-container", state="visible")
 
         # Override prompt to simulate entering a URL
-        page.evaluate("window.prompt = () => 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';")
+        page.evaluate(
+            "window.prompt = () => 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';"
+        )
 
         # Click Embed Video
         page.click("#btn-embed")
