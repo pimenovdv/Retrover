@@ -7,28 +7,16 @@ from datetime import timedelta
 from typing import Dict
 
 import aiofiles
-from fastapi import (
-    Depends,
-    FastAPI,
-    File,
-    HTTPException,
-    UploadFile,
-    WebSocket,
-    WebSocketDisconnect,
-)
+from fastapi import (Depends, FastAPI, File, HTTPException, UploadFile,
+                     WebSocket, WebSocketDisconnect)
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .auth import (
-    ACCESS_TOKEN_EXPIRE_MINUTES,
-    create_access_token,
-    decode_access_token,
-    get_password_hash,
-    verify_password,
-)
+from .auth import (ACCESS_TOKEN_EXPIRE_MINUTES, create_access_token,
+                   decode_access_token, get_password_hash, verify_password)
 from .database import AsyncSessionLocal, Base, engine, get_db
 from .models import Board, Shape, User
 from .redis_manager import redis_manager

@@ -45,6 +45,7 @@
         <div class="separator"></div>
         <button id="btn-group">Group</button>
         <button id="btn-ungroup">Ungroup</button>
+        <button id="btn-templates">Templates</button>
         <div class="separator"></div>
         <button id="btn-set-bg">Set Background</button>
         <button id="btn-clear-bg">Clear Background</button>
@@ -89,6 +90,18 @@
     <div id="history-panel" style="display: none;">
         <h3>History</h3>
         <ul id="history-list"></ul>
+    </div>
+
+    <!-- Templates Modal -->
+    <div id="templates-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h2>Select a Template</h2>
+            <div style="display: flex; gap: 10px; margin-bottom: 20px; justify-content: center;">
+                <button id="btn-template-flowchart" style="padding: 10px; font-size: 16px;">Flowchart</button>
+                <button id="btn-template-mindmap" style="padding: 10px; font-size: 16px;">Mind Map</button>
+            </div>
+            <button id="close-templates-btn">Close</button>
+        </div>
     </div>
 
     <!-- Share Modal -->
