@@ -2228,6 +2228,85 @@ function handleSelection(opt) {
     }
 });
 
+    // --- Templates Logic ---
+    const templatesModal = document.getElementById("templates-modal");
+    const btnTemplates = document.getElementById("btn-templates");
+    const closeTemplatesBtn = document.getElementById("close-templates-btn");
+    const btnTemplateFlowchart = document.getElementById("btn-template-flowchart");
+    const btnTemplateMindmap = document.getElementById("btn-template-mindmap");
+
+    if (btnTemplates) {
+        btnTemplates.addEventListener("click", () => {
+            templatesModal.style.display = "flex";
+        });
+    }
+
+    if (closeTemplatesBtn) {
+        closeTemplatesBtn.addEventListener("click", () => {
+            templatesModal.style.display = "none";
+        });
+    }
+
+    if (btnTemplateFlowchart) {
+        btnTemplateFlowchart.addEventListener("click", () => {
+            templatesModal.style.display = "none";
+            const startX = 200;
+            const startY = 200;
+
+            const rect1 = new fabric.Rect({ left: startX, top: startY, fill: '#ffcc00', width: 100, height: 60, id: uuidv4() });
+            const rect2 = new fabric.Rect({ left: startX + 200, top: startY, fill: '#00ccff', width: 100, height: 60, id: uuidv4() });
+            const rect3 = new fabric.Rect({ left: startX + 400, top: startY, fill: '#ff6666', width: 100, height: 60, id: uuidv4() });
+
+            const line1 = new fabric.Line([startX + 100, startY + 30, startX + 200, startY + 30], {
+                stroke: 'black', strokeWidth: 2, id: uuidv4()
+            });
+            const line2 = new fabric.Line([startX + 300, startY + 30, startX + 400, startY + 30], {
+                stroke: 'black', strokeWidth: 2, id: uuidv4()
+            });
+
+            const objs = [rect1, rect2, rect3, line1, line2];
+            objs.forEach(obj => {
+                canvas.add(obj);
+                // Object:added will handle the syncing
+            });
+            canvas.requestRenderAll();
+        });
+    }
+
+    if (btnTemplateMindmap) {
+        btnTemplateMindmap.addEventListener("click", () => {
+            templatesModal.style.display = "none";
+            const centerX = 400;
+            const centerY = 300;
+
+            const centerNode = new fabric.Circle({ radius: 50, fill: '#ff9999', left: centerX, top: centerY, id: uuidv4() });
+
+            const node1 = new fabric.Circle({ radius: 40, fill: '#99ff99', left: centerX - 150, top: centerY - 100, id: uuidv4() });
+            const node2 = new fabric.Circle({ radius: 40, fill: '#99ccff', left: centerX + 150, top: centerY - 100, id: uuidv4() });
+            const node3 = new fabric.Circle({ radius: 40, fill: '#ffff99', left: centerX, top: centerY + 150, id: uuidv4() });
+
+            // Connect center to nodes (approximate center connections)
+            const cX = centerX + 50;
+            const cY = centerY + 50;
+
+            const line1 = new fabric.Line([cX, cY, centerX - 150 + 40, centerY - 100 + 40], {
+                stroke: 'black', strokeWidth: 2, id: uuidv4()
+            });
+            const line2 = new fabric.Line([cX, cY, centerX + 150 + 40, centerY - 100 + 40], {
+                stroke: 'black', strokeWidth: 2, id: uuidv4()
+            });
+            const line3 = new fabric.Line([cX, cY, centerX + 40, centerY + 150 + 40], {
+                stroke: 'black', strokeWidth: 2, id: uuidv4()
+            });
+
+            const objs = [centerNode, node1, node2, node3, line1, line2, line3];
+            objs.forEach(obj => {
+                canvas.add(obj);
+            });
+            canvas.requestRenderAll();
+        });
+    }
+
     // --- Share Logic ---
     const shareModal = document.getElementById("share-modal");
     const btnShare = document.getElementById("btn-share");

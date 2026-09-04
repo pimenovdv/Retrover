@@ -1,12 +1,11 @@
 # TODO for Miro Clone
 
 ## Completed Features
-- Core collaboration, UI/UX (chat, avatars, dark mode, zoom, minimap).
-- Tools (shapes, images, videos, laser, stickies, clustering, guides).
-- History (undo/redo), Locking, Import/Export.
-- Keyboard shortcuts for grouping/ungrouping.
+- Core collaboration, UI/UX, History, Import/Export.
+- Tools: shapes, images, videos, stickies, guides, locking, clustering.
+- Diagram templates (flowcharts, mind maps).
 
 ## To-Do
 
 ### Newly Planned Features
-- [ ] Add templates for common diagrams (e.g. flowcharts, mind maps).
+- [ ] Add custom shape library (user uploaded SVG shapes).
