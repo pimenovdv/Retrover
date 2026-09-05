@@ -1000,6 +1000,47 @@ document.addEventListener("DOMContentLoaded", () => {
              imageUploadInput.value = '';
         });
 
+        const customShapeUploadInput = document.getElementById("custom-shape-upload-input");
+        document.getElementById("btn-custom-shape").addEventListener("click", () => {
+             customShapeUploadInput.click();
+        });
+
+        customShapeUploadInput.addEventListener("change", async (e) => {
+             if (e.target.files && e.target.files.length > 0) {
+                 const file = e.target.files[0];
+
+                 const formData = new FormData();
+                 formData.append("file", file);
+
+                 try {
+                     const response = await fetch('/upload', {
+                         method: 'POST',
+                         body: formData
+                     });
+                     if (!response.ok) throw new Error("Upload failed");
+                     const data = await response.json();
+
+                     if (data.url) {
+                         fabric.loadSVGFromURL(data.url, function(objects, options) {
+                             const svgObj = fabric.util.groupSVGElements(objects, options);
+                             svgObj.set({
+                                 id: uuidv4(),
+                                 left: 100,
+                                 top: 100,
+                                 z_index: getMaxZIndex() + 1
+                             });
+                             canvas.add(svgObj);
+                             canvas.setActiveObject(svgObj);
+                         });
+                     }
+                 } catch (err) {
+                     console.error("Error uploading custom shape:", err);
+                     alert("Failed to upload custom shape");
+                 }
+             }
+             customShapeUploadInput.value = '';
+        });
+
         const bgUploadInput = document.getElementById("bg-upload-input");
 
         document.getElementById("btn-set-bg").addEventListener("click", () => {

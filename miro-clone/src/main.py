@@ -452,16 +452,17 @@ async def upload_image(file: UploadFile = File(...)):
         "image/png",
         "image/gif",
         "image/webp",
+        "image/svg+xml",
         "application/pdf",
     ]
     if file.content_type not in allowed_types:
         raise HTTPException(
             status_code=400,
-            detail="Invalid file type. Only images and PDFs are allowed.",
+            detail="Invalid file type. Only images, SVGs, and PDFs are allowed.",
         )
 
     ext = file.filename.split(".")[-1].lower() if "." in file.filename else "png"
-    if ext not in ["jpg", "jpeg", "png", "gif", "webp", "pdf"]:
+    if ext not in ["jpg", "jpeg", "png", "gif", "webp", "svg", "pdf"]:
         raise HTTPException(status_code=400, detail="Invalid file extension.")
 
     content = await file.read()
