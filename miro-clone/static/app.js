@@ -26,7 +26,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let lastLaserSend = 0;
 
 
-    const TO_OBJECT_PROPS = ['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background', 'locked', 'lockMovementX', 'lockMovementY', 'lockRotation', 'lockScalingX', 'lockScalingY', 'hasControls', 'videoSrc'];
+    const TO_OBJECT_PROPS = ['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background', 'locked', 'lockMovementX', 'lockMovementY', 'lockRotation', 'lockScalingX', 'lockScalingY', 'hasControls', 'videoSrc', 'opacity'];
     window.TO_OBJECT_PROPS = TO_OBJECT_PROPS;
 
     let canvas;
@@ -2001,6 +2001,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const propStrokeWidth = document.getElementById("prop-stroke-width");
     const propFontFamily = document.getElementById("prop-font-family");
     const propAngle = document.getElementById("prop-angle");
+    const propOpacity = document.getElementById("prop-opacity");
     const propTextFormats = document.getElementById("prop-text-formats");
     const btnBold = document.getElementById("btn-bold");
     const btnItalic = document.getElementById("btn-italic");
@@ -2028,6 +2029,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (activeObject.stroke) propStroke.value = activeObject.stroke;
         if (activeObject.strokeWidth !== undefined) propStrokeWidth.value = activeObject.strokeWidth;
         if (activeObject.angle !== undefined) propAngle.value = Math.round(activeObject.angle);
+        if (activeObject.opacity !== undefined) propOpacity.value = activeObject.opacity;
 
         if (textObject) {
             propFontFamily.parentElement.style.display = 'flex';
@@ -2137,6 +2139,9 @@ function handleSelection(opt) {
 
         propAngle.addEventListener('input', (e) => applyPropertyChange('angle', parseFloat(e.target.value)));
         propAngle.addEventListener('change', (e) => applyPropertyChange('angle', parseFloat(e.target.value)));
+
+        propOpacity.addEventListener('input', (e) => applyPropertyChange('opacity', parseFloat(e.target.value)));
+        propOpacity.addEventListener('change', (e) => applyPropertyChange('opacity', parseFloat(e.target.value)));
 
         function applyTextFormat(formatType) {
             let activeObj = canvas.getActiveObject();
