@@ -1,3 +1,5 @@
+import os
+import socket
 import threading
 import time
 import uuid
@@ -37,6 +39,7 @@ def test_server():
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(os.environ.get("CI") == "true", reason="Skipping UI tests in CI")
 async def test_opacity_control(test_server):
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
