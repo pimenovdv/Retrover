@@ -2000,6 +2000,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const propStroke = document.getElementById("prop-stroke");
     const propStrokeWidth = document.getElementById("prop-stroke-width");
     const propFontFamily = document.getElementById("prop-font-family");
+    const propFontSize = document.getElementById("prop-font-size");
     const propAngle = document.getElementById("prop-angle");
     const propOpacity = document.getElementById("prop-opacity");
     const propTextFormats = document.getElementById("prop-text-formats");
@@ -2033,14 +2034,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (textObject) {
             propFontFamily.parentElement.style.display = 'flex';
+            if (propFontSize) propFontSize.parentElement.style.display = 'flex';
             propTextFormats.style.display = 'block';
             if (textObject.fontFamily) propFontFamily.value = textObject.fontFamily;
+            if (textObject.fontSize && propFontSize) propFontSize.value = textObject.fontSize;
 
             btnBold.style.backgroundColor = textObject.fontWeight === 'bold' ? '#ccc' : '';
             btnItalic.style.backgroundColor = textObject.fontStyle === 'italic' ? '#ccc' : '';
             btnUnderline.style.backgroundColor = textObject.underline ? '#ccc' : '';
         } else {
             propFontFamily.parentElement.style.display = 'none';
+            if (propFontSize) propFontSize.parentElement.style.display = 'none';
             propTextFormats.style.display = 'none';
         }
     }
@@ -2132,9 +2136,9 @@ function handleSelection(opt) {
 
         propFontFamily.addEventListener('change', (e) => applyPropertyChange('fontFamily', e.target.value));
 
-        if (typeof propFontSize !== 'undefined') {
-            propFontSize.addEventListener('input', (e) => applyPropertyChange('fontSize', e.target.value));
-            propFontSize.addEventListener('change', (e) => applyPropertyChange('fontSize', e.target.value));
+        if (typeof propFontSize !== 'undefined' && propFontSize) {
+            propFontSize.addEventListener('input', (e) => applyPropertyChange('fontSize', parseInt(e.target.value, 10)));
+            propFontSize.addEventListener('change', (e) => applyPropertyChange('fontSize', parseInt(e.target.value, 10)));
         }
 
         propAngle.addEventListener('input', (e) => applyPropertyChange('angle', parseFloat(e.target.value)));
