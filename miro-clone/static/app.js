@@ -375,6 +375,17 @@ document.addEventListener("DOMContentLoaded", () => {
             canvas.renderAll();
         });
 
+        function updateZoomDisplay() {
+            const zoomPercentage = Math.round(canvas.getZoom() * 100);
+            const zoomEl = document.getElementById("zoom-percentage");
+            if (zoomEl) {
+                zoomEl.innerText = zoomPercentage + "%";
+            }
+        }
+
+        // Initial zoom display update
+        updateZoomDisplay();
+
         // Infinite Canvas: Zoom
         canvas.on('after:render', updateMinimap);
         canvas.on('mouse:wheel', function(opt) {
@@ -384,6 +395,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (zoom > 20) zoom = 20;
             if (zoom < 0.01) zoom = 0.01;
             canvas.zoomToPoint({ x: opt.e.offsetX, y: opt.e.offsetY }, zoom);
+            updateZoomDisplay();
             opt.e.preventDefault();
             opt.e.stopPropagation();
         });
@@ -394,6 +406,7 @@ document.addEventListener("DOMContentLoaded", () => {
             zoom *= 1.2;
             if (zoom > 20) zoom = 20;
             canvas.zoomToPoint({ x: canvas.getWidth() / 2, y: canvas.getHeight() / 2 }, zoom);
+            updateZoomDisplay();
         });
 
         document.getElementById("btn-zoom-out").addEventListener("click", () => {
@@ -401,10 +414,12 @@ document.addEventListener("DOMContentLoaded", () => {
             zoom /= 1.2;
             if (zoom < 0.01) zoom = 0.01;
             canvas.zoomToPoint({ x: canvas.getWidth() / 2, y: canvas.getHeight() / 2 }, zoom);
+            updateZoomDisplay();
         });
 
         document.getElementById("btn-zoom-reset").addEventListener("click", () => {
             canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
+            updateZoomDisplay();
         });
 
         // Infinite Canvas: Pan

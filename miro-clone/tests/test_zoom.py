@@ -46,6 +46,8 @@ async def test_zoom_controls(test_server):
         # Initial zoom should be 1
         initial_zoom = await page.evaluate("() => window.canvas.getZoom()")
         assert initial_zoom == 1
+        zoom_text = await page.inner_text("#zoom-percentage")
+        assert zoom_text == "100%"
 
         # Zoom in
         await page.click("#btn-zoom-in")
@@ -53,17 +55,23 @@ async def test_zoom_controls(test_server):
         zoom_in_val = await page.evaluate("() => window.canvas.getZoom()")
         assert zoom_in_val > 1
         assert abs(zoom_in_val - 1.2) < 0.01
+        zoom_text = await page.inner_text("#zoom-percentage")
+        assert zoom_text == "120%"
 
         # Zoom out
         await page.click("#btn-zoom-out")
         await page.wait_for_timeout(100)
         zoom_out_val = await page.evaluate("() => window.canvas.getZoom()")
         assert abs(zoom_out_val - 1) < 0.01
+        zoom_text = await page.inner_text("#zoom-percentage")
+        assert zoom_text == "100%"
 
         await page.click("#btn-zoom-out")
         await page.wait_for_timeout(100)
         zoom_out_val2 = await page.evaluate("() => window.canvas.getZoom()")
         assert zoom_out_val2 < 1
+        zoom_text = await page.inner_text("#zoom-percentage")
+        assert zoom_text == "83%"
 
         # Reset zoom
         # Pan a little first to test viewport reset
@@ -81,6 +89,8 @@ async def test_zoom_controls(test_server):
 
         final_zoom = await page.evaluate("() => window.canvas.getZoom()")
         assert final_zoom == 1
+        zoom_text = await page.inner_text("#zoom-percentage")
+        assert zoom_text == "100%"
 
         vpt_after = await page.evaluate("() => window.canvas.viewportTransform")
         assert vpt_after[4] == 0
