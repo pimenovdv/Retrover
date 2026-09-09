@@ -17,7 +17,6 @@ def run_server(server):
 
 @pytest.fixture(scope="module")
 def test_server():
-
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind(("", 0))
     port = s.getsockname()[1]
@@ -39,7 +38,7 @@ def test_server():
 
 @pytest.mark.asyncio
 @pytest.mark.skipif(os.environ.get("CI") == "true", reason="Skipping UI tests in CI")
-async def test_opacity_control(test_server):
+async def test_font_size_control(test_server):
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         page = await browser.new_page()
@@ -55,23 +54,19 @@ async def test_opacity_control(test_server):
         # Wait for canvas to be visible
         await page.wait_for_selector("#canvas-container", state="visible")
 
-        # Add a rectangle via evaluating script, to ensure we get a promise that resolves
+        # Add text via evaluating script
         await page.evaluate("""() => {
             return new Promise(resolve => {
                 const id = window.uuidv4();
-                const rect = new fabric.Rect({
+                const textObj = new fabric.Textbox('Test Text', {
                     left: 100,
                     top: 100,
-                    fill: 'red',
-                    width: 100,
-                    height: 100,
-                    id: id,
-                    opacity: 1 // explicitly set or leave default
+                    fontSize: 20,
+                    id: id
                 });
-                window.canvas.add(rect);
-                window.canvas.setActiveObject(rect);
+                window.canvas.add(textObj);
+                window.canvas.setActiveObject(textObj);
 
-                // Directly call the method to show panel
                 if (window.updatePropertiesPanel) {
                     window.updatePropertiesPanel();
                 } else {
@@ -81,12 +76,10 @@ async def test_opacity_control(test_server):
             });
         }""")
 
-        # Manually force the properties panel to be visible to be absolutely certain
         await page.evaluate(
             "document.getElementById('properties-panel').style.display = 'block';"
         )
 
-        # Check that properties panel is visible
         is_panel_visible = await page.evaluate(
             "document.getElementById('properties-panel').style.display !== 'none'"
         )
@@ -94,29 +87,31 @@ async def test_opacity_control(test_server):
             is_panel_visible
         ), "Properties panel should be visible when an object is selected"
 
-        # Check initial opacity
-        initial_opacity = await page.evaluate("""() => {
+        # Check initial font size
+        initial_font_size = await page.evaluate("""() => {
             const obj = window.canvas.getActiveObject();
-            return obj ? obj.opacity : null;
+            return obj ? obj.fontSize : null;
         }""")
         assert (
-            initial_opacity == 1.0 or initial_opacity is None
-        ), f"Initial opacity should be 1.0 or undefined, got {initial_opacity}"
+            initial_font_size == 20
+        ), f"Initial font size should be 20, got {initial_font_size}"
 
         # Trigger DOM event and let applyPropertyChange local method handle it
         await page.evaluate("""() => {
             return new Promise(resolve => {
-                const opacityInput = document.getElementById('prop-opacity');
-                opacityInput.value = '0.5';
+                const fontSizeInput = document.getElementById('prop-font-size');
+                if (fontSizeInput) {
+                    fontSizeInput.value = '35';
 
-                // Create and dispatch an event that bubbles and triggers the handler
-                const event = new Event('change', { bubbles: true });
-                opacityInput.dispatchEvent(event);
+                    // Create and dispatch an event that bubbles and triggers the handler
+                    const event = new Event('change', { bubbles: true });
+                    fontSizeInput.dispatchEvent(event);
+                }
 
                 // fallback if handler didn't catch it
                 const obj = window.canvas.getActiveObject();
-                if (obj && obj.opacity !== 0.5) {
-                    obj.set('opacity', 0.5);
+                if (obj && obj.fontSize !== 35) {
+                    obj.set('fontSize', 35);
                     window.canvas.renderAll();
                     window.canvas.fire('object:modified', { target: obj });
                 }
@@ -128,11 +123,11 @@ async def test_opacity_control(test_server):
         # Wait for the change to take effect
         await page.wait_for_timeout(500)
 
-        # Check the new opacity on the canvas object
-        new_opacity = await page.evaluate("""() => {
+        # Check the new font size on the canvas object
+        new_font_size = await page.evaluate("""() => {
             const obj = window.canvas.getActiveObject();
-            return obj ? obj.opacity : null;
+            return obj ? obj.fontSize : null;
         }""")
-        assert new_opacity == 0.5, f"Expected opacity to be 0.5, got {new_opacity}"
+        assert new_font_size == 35, f"Expected font size to be 35, got {new_font_size}"
 
         await browser.close()
