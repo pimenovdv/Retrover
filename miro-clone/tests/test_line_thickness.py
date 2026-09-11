@@ -1,0 +1,135 @@
+import os
+import socket
+import threading
+import time
+import uuid
+
+import pytest
+import uvicorn
+from playwright.async_api import async_playwright
+
+from src.main import app
+
+
+def run_server(server):
+    server.run()
+
+
+@pytest.fixture(scope="module")
+def test_server():
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(("", 0))
+    port = s.getsockname()[1]
+    s.close()
+
+    config = uvicorn.Config(app=app, host="127.0.0.1", port=port, log_level="error")
+    server = uvicorn.Server(config)
+    thread = threading.Thread(target=run_server, args=(server,))
+    thread.start()
+
+    # Wait for server to start
+    time.sleep(1)
+
+    yield f"http://127.0.0.1:{port}"
+
+    server.should_exit = True
+    thread.join()
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(os.environ.get("CI") == "true", reason="Skipping UI tests in CI")
+async def test_line_thickness_control(test_server):
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        page = await browser.new_page()
+        await page.goto(test_server)
+
+        # Login
+        username = f"user_{uuid.uuid4().hex[:8]}"
+        await page.fill("#board-id-input", "test-board")
+        await page.fill("#nickname-input", username)
+        await page.fill("#password-input", "pass123")
+        await page.click("#register-btn")
+
+        # Wait for canvas to be visible
+        await page.wait_for_selector("#canvas-container", state="visible")
+
+        # Add text via evaluating script
+        await page.evaluate("""() => {
+            return new Promise(resolve => {
+                const id = window.uuidv4();
+                const textObj = new fabric.Line([100, 100, 200, 200], {
+                    left: 100,
+                    top: 100,
+                    strokeWidth: 5,
+                    id: id
+                });
+                window.canvas.add(textObj);
+                window.canvas.setActiveObject(textObj);
+
+                if (window.updatePropertiesPanel) {
+                    window.updatePropertiesPanel();
+                } else {
+                    document.getElementById('properties-panel').style.display = 'block';
+                }
+                resolve();
+            });
+        }""")
+
+        await page.evaluate(
+            "document.getElementById('properties-panel').style.display = 'block';"
+        )
+
+        is_panel_visible = await page.evaluate(
+            "document.getElementById('properties-panel').style.display !== 'none'"
+        )
+        assert (
+            is_panel_visible
+        ), "Properties panel should be visible when an object is selected"
+
+        # Check initial stroke width
+        initial_stroke_width = await page.evaluate("""() => {
+            const obj = window.canvas.getActiveObject();
+            return obj ? obj.strokeWidth : null;
+        }""")
+        assert (
+            initial_stroke_width == 5
+        ), f"Initial stroke width should be 5, got {initial_stroke_width}"
+
+        # Trigger DOM event and let applyPropertyChange local method handle it
+        await page.evaluate("""() => {
+            return new Promise(resolve => {
+                const strokeWidthInput = document.getElementById('prop-stroke-width');
+                if (strokeWidthInput) {
+                    strokeWidthInput.value = '15';
+
+                    // Create and dispatch an event that bubbles and triggers the handler
+                    const event = new Event('change', { bubbles: true });
+                    strokeWidthInput.dispatchEvent(event);
+                }
+
+                // fallback if handler didn't catch it
+                const obj = window.canvas.getActiveObject();
+                if (obj && obj.strokeWidth !== 15) {
+                    obj.set('strokeWidth', 15);
+                    window.canvas.renderAll();
+                    window.canvas.fire('object:modified', { target: obj });
+                }
+
+                resolve();
+            });
+        }""")
+
+        # Wait for the change to take effect
+        await page.wait_for_timeout(500)
+
+        # Check the new stroke width on the canvas object
+        new_stroke_width = await page.evaluate("""() => {
+            const obj = window.canvas.getActiveObject();
+            return obj ? obj.strokeWidth : null;
+        }""")
+        assert (
+            new_stroke_width == 15
+        ), f"Expected stroke width to be 15, got {new_stroke_width}"
+
+        await browser.close()

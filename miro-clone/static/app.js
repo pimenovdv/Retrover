@@ -26,7 +26,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let lastLaserSend = 0;
 
 
-    const TO_OBJECT_PROPS = ['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background', 'locked', 'lockMovementX', 'lockMovementY', 'lockRotation', 'lockScalingX', 'lockScalingY', 'hasControls', 'videoSrc', 'opacity'];
+    const TO_OBJECT_PROPS = ['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background', 'locked', 'lockMovementX', 'lockMovementY', 'lockRotation', 'lockScalingX', 'lockScalingY', 'hasControls', 'videoSrc', 'opacity', 'strokeDashArray'];
     window.TO_OBJECT_PROPS = TO_OBJECT_PROPS;
 
     let canvas;
@@ -1999,6 +1999,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const propFill = document.getElementById("prop-fill");
     const propStroke = document.getElementById("prop-stroke");
     const propStrokeWidth = document.getElementById("prop-stroke-width");
+    const propStrokeStyle = document.getElementById("prop-stroke-style");
     const propFontFamily = document.getElementById("prop-font-family");
     const propFontSize = document.getElementById("prop-font-size");
     const propAngle = document.getElementById("prop-angle");
@@ -2029,6 +2030,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (activeObject.fill) propFill.value = activeObject.fill;
         if (activeObject.stroke) propStroke.value = activeObject.stroke;
         if (activeObject.strokeWidth !== undefined) propStrokeWidth.value = activeObject.strokeWidth;
+        if (propStrokeStyle) propStrokeStyle.value = (activeObject.strokeDashArray && activeObject.strokeDashArray.length > 0) ? 'dashed' : 'solid';
         if (activeObject.angle !== undefined) propAngle.value = Math.round(activeObject.angle);
         if (activeObject.opacity !== undefined) propOpacity.value = activeObject.opacity;
 
@@ -2151,6 +2153,10 @@ function handleSelection(opt) {
 
         propOpacity.addEventListener('input', (e) => applyPropertyChange('opacity', parseFloat(e.target.value)));
         propOpacity.addEventListener('change', (e) => applyPropertyChange('opacity', parseFloat(e.target.value)));
+
+        if (propStrokeStyle) {
+            propStrokeStyle.addEventListener('change', (e) => applyPropertyChange('strokeDashArray', e.target.value === 'dashed' ? [5, 5] : null));
+        }
 
         function applyTextFormat(formatType) {
             let activeObj = canvas.getActiveObject();
