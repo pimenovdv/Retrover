@@ -1660,6 +1660,46 @@ document.addEventListener("DOMContentLoaded", () => {
                  if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
                  paste();
                  e.preventDefault();
+             } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
+                 if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
+                 e.preventDefault();
+                 const selectableObjects = canvas.getObjects().filter(obj => !obj.is_background && obj.selectable);
+                 if (selectableObjects.length > 0) {
+                     canvas.discardActiveObject();
+                     const sel = new fabric.ActiveSelection(selectableObjects, {
+                         canvas: canvas
+                     });
+                     canvas.setActiveObject(sel);
+                     canvas.requestRenderAll();
+                 }
+             } else if (e.key === 'Escape') {
+                 if (canvas.getActiveObject()) {
+                     canvas.discardActiveObject();
+                     canvas.requestRenderAll();
+                 }
+             } else if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                 const activeObject = canvas.getActiveObject();
+                 if (!activeObject || (activeObject.isEditing)) return;
+                 e.preventDefault();
+
+                 const step = e.shiftKey ? 10 : 1;
+                 let dx = 0;
+                 let dy = 0;
+
+                 switch (e.key) {
+                     case 'ArrowUp': dy = -step; break;
+                     case 'ArrowDown': dy = step; break;
+                     case 'ArrowLeft': dx = -step; break;
+                     case 'ArrowRight': dx = step; break;
+                 }
+
+                 activeObject.set({
+                     left: activeObject.left + dx,
+                     top: activeObject.top + dy
+                 });
+                 activeObject.setCoords();
+                 canvas.fire('object:modified', { target: activeObject });
+                 canvas.requestRenderAll();
              } else if (e.key === 'Delete' || e.key === 'Backspace') {
                  // Check if we are editing text, if so don't delete the whole object
                  if (canvas.getActiveObject() && canvas.getActiveObject().isEditing) {
