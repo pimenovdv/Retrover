@@ -42,9 +42,12 @@ document.addEventListener("DOMContentLoaded", () => {
     let redoStack = [];
     let isEraserMode = false;
     let isLaserMode = false;
+    let isHandMode = false;
+    let isSpaceDown = false;
 
     window.isEraserMode = isEraserMode;
     window.isLaserMode = isLaserMode;
+    window.isHandMode = isHandMode;
     window.undoStack = undoStack;
     window.redoStack = redoStack;
 
@@ -414,7 +417,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         canvas.on('mouse:down', function(opt) {
             var evt = opt.e;
-            if (evt.altKey === true || evt.button === 1) {
+            if (evt.altKey === true || evt.button === 1 || isSpaceDown || isHandMode) {
                 isDragging = true;
                 canvas.selection = false;
                 lastPosX = evt.clientX;
@@ -728,39 +731,70 @@ document.addEventListener("DOMContentLoaded", () => {
         const btnFreehand = document.getElementById("btn-freehand");
         const btnEraser = document.getElementById("btn-eraser");
         const btnLaser = document.getElementById("btn-laser");
+        const btnHand = document.getElementById("btn-hand");
+
+        function updateToolButtons() {
+            btnFreehand.style.backgroundColor = canvas.isDrawingMode ? '#ccc' : '#f0f0f0';
+            btnEraser.style.backgroundColor = isEraserMode ? '#ccc' : '#f0f0f0';
+            btnLaser.style.backgroundColor = isLaserMode ? '#ccc' : '#f0f0f0';
+            btnHand.style.backgroundColor = isHandMode ? '#ccc' : '#f0f0f0';
+
+            if (isHandMode || isSpaceDown) {
+                canvas.defaultCursor = 'grab';
+                canvas.hoverCursor = 'grab';
+            } else {
+                canvas.defaultCursor = 'default';
+                canvas.hoverCursor = 'move';
+            }
+        }
 
         btnFreehand.addEventListener("click", () => {
              isEraserMode = false;
              isLaserMode = false;
+             isHandMode = false;
              window.isEraserMode = isEraserMode;
              window.isLaserMode = isLaserMode;
+             window.isHandMode = isHandMode;
              canvas.isDrawingMode = !canvas.isDrawingMode;
-             btnFreehand.style.backgroundColor = canvas.isDrawingMode ? '#ccc' : '#f0f0f0';
-             btnEraser.style.backgroundColor = '#f0f0f0';
-             btnLaser.style.backgroundColor = '#f0f0f0';
+             updateToolButtons();
         });
 
         btnEraser.addEventListener("click", () => {
              isEraserMode = !isEraserMode;
              isLaserMode = false;
+             isHandMode = false;
              window.isEraserMode = isEraserMode;
              window.isLaserMode = isLaserMode;
+             window.isHandMode = isHandMode;
              canvas.isDrawingMode = isEraserMode;
-             btnEraser.style.backgroundColor = isEraserMode ? '#ccc' : '#f0f0f0';
-             btnFreehand.style.backgroundColor = '#f0f0f0';
-             btnLaser.style.backgroundColor = '#f0f0f0';
+             updateToolButtons();
         });
 
         btnLaser.addEventListener("click", () => {
              isLaserMode = !isLaserMode;
              isEraserMode = false;
+             isHandMode = false;
+             window.isLaserMode = isLaserMode;
+             window.isEraserMode = isEraserMode;
+             window.isHandMode = isHandMode;
+             canvas.isDrawingMode = false;
+             updateToolButtons();
+             if (isLaserMode) {
+                 canvas.discardActiveObject();
+                 canvas.requestRenderAll();
+             }
+        });
+
+        btnHand.addEventListener("click", () => {
+             isHandMode = !isHandMode;
+             isLaserMode = false;
+             isEraserMode = false;
+             window.isHandMode = isHandMode;
              window.isLaserMode = isLaserMode;
              window.isEraserMode = isEraserMode;
              canvas.isDrawingMode = false;
-             btnLaser.style.backgroundColor = isLaserMode ? '#ccc' : '#f0f0f0';
-             btnFreehand.style.backgroundColor = '#f0f0f0';
-             btnEraser.style.backgroundColor = '#f0f0f0';
-             if (isLaserMode) {
+             updateToolButtons();
+             if (isHandMode) {
                  canvas.discardActiveObject();
                  canvas.requestRenderAll();
              }
@@ -1639,6 +1673,13 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
                 window.addEventListener('keydown', (e) => {
+             if (e.code === 'Space') {
+                 if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA' || (canvas.getActiveObject() && canvas.getActiveObject().isEditing)) return;
+                 isSpaceDown = true;
+                 if (typeof updateToolButtons === 'function') updateToolButtons();
+                 e.preventDefault(); // Prevent scrolling
+             }
+
              if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'g') {
                  if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
                  if (e.shiftKey) {
@@ -1729,6 +1770,13 @@ document.addEventListener("DOMContentLoaded", () => {
              } else if ((e.key === 'y' && (e.ctrlKey || e.metaKey)) || (e.key === 'z' && (e.ctrlKey || e.metaKey) && e.shiftKey)) {
                  e.preventDefault();
                  performRedo();
+             }
+        });
+
+        window.addEventListener('keyup', (e) => {
+             if (e.code === 'Space') {
+                 isSpaceDown = false;
+                 if (typeof updateToolButtons === 'function') updateToolButtons();
              }
         });
 
