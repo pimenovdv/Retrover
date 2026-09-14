@@ -1660,6 +1660,22 @@ document.addEventListener("DOMContentLoaded", () => {
                  if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
                  paste();
                  e.preventDefault();
+             } else if ((e.ctrlKey || e.metaKey) && e.key === ']') {
+                 if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
+                 const activeObject = canvas.getActiveObject();
+                 if (activeObject) {
+                     canvas.bringToFront(activeObject);
+                     updateZIndices();
+                 }
+                 e.preventDefault();
+             } else if ((e.ctrlKey || e.metaKey) && e.key === '[') {
+                 if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
+                 const activeObject = canvas.getActiveObject();
+                 if (activeObject) {
+                     canvas.sendToBack(activeObject);
+                     updateZIndices();
+                 }
+                 e.preventDefault();
              } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
                  if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
                  e.preventDefault();

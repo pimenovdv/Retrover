@@ -136,3 +136,83 @@ async def test_keyboard_shortcuts(test_server):
         # However, object nudging via arrow keys should just test that coordinates change.
 
         await browser.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(os.environ.get("CI") == "true", reason="Skipping UI tests in CI")
+async def test_keyboard_shortcuts_z_index(test_server):
+    from playwright.async_api import async_playwright
+
+    port = test_server
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        page = await browser.new_page()
+
+        await page.goto(f"http://127.0.0.1:{port}/")
+
+        # Login
+        await page.fill("#board-id-input", f"keyboard_z_test_{uuid.uuid4()}")
+        username = f"user_{uuid.uuid4()}"
+        await page.fill("#nickname-input", username)
+        await page.fill("#password-input", "password123")
+        await page.click("#register-btn")
+
+        await page.wait_for_selector("#canvas-container", state="visible")
+        await page.wait_for_timeout(500)
+
+        # Draw a rectangle
+        await page.click("#btn-rect")
+        await page.mouse.move(200, 200)
+        await page.mouse.down()
+        await page.mouse.move(250, 250)
+        await page.mouse.up()
+        await page.wait_for_timeout(200)
+
+        # Draw a circle
+        await page.click("#btn-circle")
+        await page.mouse.move(200, 200)
+        await page.mouse.down()
+        await page.mouse.move(250, 250)
+        await page.mouse.up()
+        await page.wait_for_timeout(200)
+
+        # Draw a text
+        await page.click("#btn-text")
+        await page.mouse.click(200, 200)
+        await page.wait_for_timeout(200)
+        await page.keyboard.type("hello")
+        await page.keyboard.press("Escape")
+        await page.wait_for_timeout(200)
+
+        objects_count = await page.evaluate(
+            "() => window.canvas.getObjects().filter(o => !o.is_background).length"
+        )
+        assert objects_count == 3
+
+        # Select first object (rectangle)
+        await page.evaluate(
+            "() => { window.canvas.setActiveObject(window.canvas.getObjects().filter(o => !o.is_background)[0]); window.canvas.requestRenderAll(); }"
+        )
+        await page.wait_for_timeout(200)
+
+        # Test Ctrl + ] (bring to front)
+        await page.keyboard.press("Control+]")
+        await page.wait_for_timeout(200)
+
+        # Assert rectangle is now at the top
+        top_object_type = await page.evaluate(
+            "() => window.canvas.getObjects().filter(o => !o.is_background).pop().type"
+        )
+        assert top_object_type == "rect"
+
+        # Test Ctrl + [ (send to back)
+        await page.keyboard.press("Control+[")
+        await page.wait_for_timeout(200)
+
+        # Assert rectangle is now at the bottom
+        bottom_object_type = await page.evaluate(
+            "() => window.canvas.getObjects().filter(o => !o.is_background).shift().type"
+        )
+        assert bottom_object_type == "rect"
+
+        await browser.close()
