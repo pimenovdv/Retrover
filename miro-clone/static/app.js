@@ -26,7 +26,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let lastLaserSend = 0;
 
 
-    const TO_OBJECT_PROPS = ['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background', 'locked', 'lockMovementX', 'lockMovementY', 'lockRotation', 'lockScalingX', 'lockScalingY', 'hasControls', 'videoSrc', 'opacity', 'strokeDashArray'];
+    const TO_OBJECT_PROPS = ['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background', 'locked', 'lockMovementX', 'lockMovementY', 'lockRotation', 'lockScalingX', 'lockScalingY', 'hasControls', 'videoSrc', 'opacity', 'strokeDashArray', 'flipX', 'flipY'];
     window.TO_OBJECT_PROPS = TO_OBJECT_PROPS;
 
     let canvas;
@@ -2064,6 +2064,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnBold = document.getElementById("btn-bold");
     const btnItalic = document.getElementById("btn-italic");
     const btnUnderline = document.getElementById("btn-underline");
+    const btnFlipX = document.getElementById("btn-flip-x");
+    const btnFlipY = document.getElementById("btn-flip-y");
 
     window.updatePropertiesPanel = function updatePropertiesPanel() {
         let activeObject = canvas.getActiveObject();
@@ -2209,6 +2211,73 @@ function handleSelection(opt) {
 
         propOpacity.addEventListener('input', (e) => applyPropertyChange('opacity', parseFloat(e.target.value)));
         propOpacity.addEventListener('change', (e) => applyPropertyChange('opacity', parseFloat(e.target.value)));
+
+        if (btnFlipX) {
+            btnFlipX.addEventListener('click', () => {
+                console.log('btnFlipX clicked');
+                console.log('activeObj:', canvas.getActiveObject());
+                let activeObj = canvas.getActiveObject();
+                if (!activeObj) return;
+
+                // If it's an activeSelection, flip each item individually? Or flip the whole group?
+                // Standard behavior for flip on activeSelection flips the entire selection.
+                // However, applyPropertyChange handles activeSelection nicely. But flipX/flipY are boolean toggles.
+
+                if (activeObj.type === 'activeSelection') {
+                    const prevData = activeObj.getObjects().map(o => o.toObject(TO_OBJECT_PROPS));
+                    const flipXVal = !activeObj.flipX;
+                    activeObj.set('flipX', flipXVal);
+                    activeObj.setCoords();
+                    canvas.requestRenderAll();
+                    // For active selection, setting flipX doesn't automatically propagate to children in a way that toObject captures individually correctly unless grouped.
+                    // Actually, let's just toggle on each object
+                    activeObj.forEachObject(obj => {
+                        obj.set('flipX', !obj.flipX);
+                        obj.setCoords();
+                    });
+                    const modifiedData = activeObj.getObjects().map(o => o.toObject(TO_OBJECT_PROPS));
+                    pushHistory('modify', prevData, modifiedData);
+                    canvas.fire('object:modified', { target: activeObj });
+                } else {
+                    const prevData = [activeObj.toObject(TO_OBJECT_PROPS)];
+                    activeObj.set('flipX', !activeObj.flipX);
+                    activeObj.setCoords();
+                    canvas.requestRenderAll();
+                    const modifiedData = [activeObj.toObject(TO_OBJECT_PROPS)];
+                    pushHistory('modify', prevData, modifiedData);
+                    canvas.fire('object:modified', { target: activeObj });
+                }
+            });
+        }
+
+        if (btnFlipY) {
+            btnFlipY.addEventListener('click', () => {
+                let activeObj = canvas.getActiveObject();
+                if (!activeObj) return;
+
+                if (activeObj.type === 'activeSelection') {
+                    const prevData = activeObj.getObjects().map(o => o.toObject(TO_OBJECT_PROPS));
+                    activeObj.forEachObject(obj => {
+                        obj.set('flipY', !obj.flipY);
+                        obj.setCoords();
+                    });
+                    activeObj.set('flipY', !activeObj.flipY);
+                    activeObj.setCoords();
+                    canvas.requestRenderAll();
+                    const modifiedData = activeObj.getObjects().map(o => o.toObject(TO_OBJECT_PROPS));
+                    pushHistory('modify', prevData, modifiedData);
+                    canvas.fire('object:modified', { target: activeObj });
+                } else {
+                    const prevData = [activeObj.toObject(TO_OBJECT_PROPS)];
+                    activeObj.set('flipY', !activeObj.flipY);
+                    activeObj.setCoords();
+                    canvas.requestRenderAll();
+                    const modifiedData = [activeObj.toObject(TO_OBJECT_PROPS)];
+                    pushHistory('modify', prevData, modifiedData);
+                    canvas.fire('object:modified', { target: activeObj });
+                }
+            });
+        }
 
         if (propStrokeStyle) {
             propStrokeStyle.addEventListener('change', (e) => applyPropertyChange('strokeDashArray', e.target.value === 'dashed' ? [5, 5] : null));
