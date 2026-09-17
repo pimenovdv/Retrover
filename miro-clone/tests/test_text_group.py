@@ -55,12 +55,14 @@ async def test_rich_text_formatting(test_server):
              const btnBold = document.getElementById("btn-bold");
              const btnItalic = document.getElementById("btn-italic");
              const btnUnderline = document.getElementById("btn-underline");
+             const btnStrikethrough = document.getElementById("btn-strikethrough");
 
              // Fabric properties sometimes need to be forced to trigger events properly in headless tests
              if (textObj) {
                  textObj.set('fontWeight', 'bold');
                  textObj.set('fontStyle', 'italic');
                  textObj.set('underline', true);
+                 textObj.set('linethrough', true);
                  window.canvas.renderAll();
              }
         }""")
@@ -74,7 +76,8 @@ async def test_rich_text_formatting(test_server):
                 type: textObj.type,
                 fontWeight: textObj.fontWeight,
                 fontStyle: textObj.fontStyle,
-                underline: textObj.underline
+                underline: textObj.underline,
+                linethrough: textObj.linethrough
             };
         }""")
 
@@ -82,6 +85,7 @@ async def test_rich_text_formatting(test_server):
         assert text_props["fontWeight"] == "bold"
         assert text_props["fontStyle"] == "italic"
         assert text_props["underline"] is True
+        assert text_props["linethrough"] is True
 
         await browser.close()
 

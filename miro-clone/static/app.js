@@ -26,7 +26,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let lastLaserSend = 0;
 
 
-    const TO_OBJECT_PROPS = ['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background', 'locked', 'lockMovementX', 'lockMovementY', 'lockRotation', 'lockScalingX', 'lockScalingY', 'hasControls', 'videoSrc', 'opacity', 'strokeDashArray', 'flipX', 'flipY'];
+    const TO_OBJECT_PROPS = ['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background', 'locked', 'lockMovementX', 'lockMovementY', 'lockRotation', 'lockScalingX', 'lockScalingY', 'hasControls', 'videoSrc', 'opacity', 'strokeDashArray', 'flipX', 'flipY', 'linethrough'];
     window.TO_OBJECT_PROPS = TO_OBJECT_PROPS;
 
     let canvas;
@@ -2064,6 +2064,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnBold = document.getElementById("btn-bold");
     const btnItalic = document.getElementById("btn-italic");
     const btnUnderline = document.getElementById("btn-underline");
+    const btnStrikethrough = document.getElementById("btn-strikethrough");
     const btnFlipX = document.getElementById("btn-flip-x");
     const btnFlipY = document.getElementById("btn-flip-y");
 
@@ -2104,6 +2105,7 @@ document.addEventListener("DOMContentLoaded", () => {
             btnBold.style.backgroundColor = textObject.fontWeight === 'bold' ? '#ccc' : '';
             btnItalic.style.backgroundColor = textObject.fontStyle === 'italic' ? '#ccc' : '';
             btnUnderline.style.backgroundColor = textObject.underline ? '#ccc' : '';
+            btnStrikethrough.style.backgroundColor = textObject.linethrough ? '#ccc' : '';
         } else {
             propFontFamily.parentElement.style.display = 'none';
             if (propFontSize) propFontSize.parentElement.style.display = 'none';
@@ -2303,6 +2305,8 @@ function handleSelection(opt) {
                     textObj.set('fontStyle', textObj.fontStyle === 'italic' ? 'normal' : 'italic');
                 } else if (formatType === 'underline') {
                     textObj.set('underline', !textObj.underline);
+                } else if (formatType === 'strikethrough') {
+                    textObj.set('linethrough', !textObj.linethrough);
                 }
 
                 // If active object is a group, we modify the internal text object but need to fire events for the whole group
@@ -2318,6 +2322,7 @@ function handleSelection(opt) {
         btnBold.addEventListener('click', () => applyTextFormat('bold'));
         btnItalic.addEventListener('click', () => applyTextFormat('italic'));
         btnUnderline.addEventListener('click', () => applyTextFormat('underline'));
+        btnStrikethrough.addEventListener('click', () => applyTextFormat('strikethrough'));
 
         const applyTextAlign = (align) => {
             const obj = canvas.getActiveObject();
