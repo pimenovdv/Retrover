@@ -1160,7 +1160,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
         document.getElementById("btn-duplicate")?.addEventListener("click", duplicate);
 
-        document.getElementById("btn-lock")?.addEventListener("click", () => {
+
+        function toggleLock() {
             const activeObject = canvas.getActiveObject();
             if (!activeObject) return;
 
@@ -1198,7 +1199,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
             canvas.fire('object:modified', { target: activeObject });
             canvas.requestRenderAll();
-        });
+        }
+        document.getElementById("btn-lock")?.addEventListener("click", toggleLock);
 
         document.getElementById("btn-clear").addEventListener("click", () => {
             canvas.discardActiveObject();
@@ -1659,6 +1661,10 @@ document.addEventListener("DOMContentLoaded", () => {
              } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
                  if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
                  paste();
+                 e.preventDefault();
+             } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'l') {
+                 if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
+                 toggleLock();
                  e.preventDefault();
              } else if ((e.ctrlKey || e.metaKey) && e.key === ']') {
                  if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;

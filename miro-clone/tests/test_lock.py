@@ -106,3 +106,67 @@ def test_lock_unlock(test_server):
 
         has_controls = page.evaluate("window.canvas.getObjects()[0].hasControls")
         assert has_controls
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(os.environ.get("CI") == "true", reason="Skipping UI tests in CI")
+async def test_lock_unlock_shortcut(test_server):
+    import uuid
+
+    from playwright.async_api import async_playwright
+
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        page = await browser.new_page()
+        await page.goto(f"http://127.0.0.1:{test_server}/")
+
+        username = f"user_{uuid.uuid4().hex[:8]}"
+        await page.fill("#nickname-input", username)
+        await page.fill("#password-input", "password")
+        await page.click("#register-btn")
+
+        await page.wait_for_selector("#canvas-container", state="visible")
+
+        await page.click("#btn-rect")
+        await page.wait_for_timeout(500)
+
+        await page.evaluate("""
+            const obj = window.canvas.getObjects()[0];
+            obj.set('locked', false);
+            obj.set('lockMovementX', false);
+            obj.set('hasControls', true);
+            window.canvas.setActiveObject(obj);
+            if (window.updatePropertiesPanel) window.updatePropertiesPanel();
+            window.canvas.requestRenderAll();
+        """)
+
+        locked = await page.evaluate("window.canvas.getActiveObject()?.locked")
+        assert not locked
+
+        # Press Ctrl+L on the body to trigger the lock shortcut
+        await page.locator("body").press("Control+l")
+        await page.wait_for_timeout(500)
+
+        locked = await page.evaluate("window.canvas.getObjects()[0].locked")
+        assert locked
+
+        has_controls = await page.evaluate("window.canvas.getObjects()[0].hasControls")
+        assert not has_controls
+
+        # Unlock it
+        await page.evaluate("""
+            const obj = window.canvas.getObjects()[0];
+            window.canvas.setActiveObject(obj);
+            window.canvas.requestRenderAll();
+        """)
+
+        await page.locator("body").press("Control+l")
+        await page.wait_for_timeout(500)
+
+        locked = await page.evaluate("window.canvas.getObjects()[0].locked")
+        assert not locked
+
+        has_controls = await page.evaluate("window.canvas.getObjects()[0].hasControls")
+        assert has_controls
+
+        await browser.close()
