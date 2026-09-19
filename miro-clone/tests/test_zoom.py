@@ -86,4 +86,36 @@ async def test_zoom_controls(test_server):
         assert vpt_after[4] == 0
         assert vpt_after[5] == 0
 
+        # Keyboard shortcuts
+        await page.keyboard.press("Control+=")
+        await page.wait_for_timeout(100)
+        kb_zoom_in = await page.evaluate("() => window.canvas.getZoom()")
+        assert kb_zoom_in > 1
+        assert abs(kb_zoom_in - 1.2) < 0.01
+
+        await page.keyboard.press("Control+-")
+        await page.wait_for_timeout(100)
+        kb_zoom_out = await page.evaluate("() => window.canvas.getZoom()")
+        assert abs(kb_zoom_out - 1) < 0.01
+
+        # Pan again to test kb reset
+        await page.evaluate("""() => {
+            let vpt = window.canvas.viewportTransform;
+            vpt[4] = 100;
+            vpt[5] = 100;
+            window.canvas.setViewportTransform(vpt);
+        }""")
+        vpt_before_kb = await page.evaluate("() => window.canvas.viewportTransform")
+        assert vpt_before_kb[4] == 100
+
+        await page.keyboard.press("Control+0")
+        await page.wait_for_timeout(100)
+
+        kb_final_zoom = await page.evaluate("() => window.canvas.getZoom()")
+        assert kb_final_zoom == 1
+
+        vpt_after_kb = await page.evaluate("() => window.canvas.viewportTransform")
+        assert vpt_after_kb[4] == 0
+        assert vpt_after_kb[5] == 0
+
         await browser.close()

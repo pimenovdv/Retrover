@@ -1751,6 +1751,21 @@ document.addEventListener("DOMContentLoaded", () => {
              } else if ((e.key === 'y' && (e.ctrlKey || e.metaKey)) || (e.key === 'z' && (e.ctrlKey || e.metaKey) && e.shiftKey)) {
                  e.preventDefault();
                  performRedo();
+             } else if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '+')) {
+                 e.preventDefault();
+                 let zoom = canvas.getZoom();
+                 zoom *= 1.2;
+                 if (zoom > 20) zoom = 20;
+                 canvas.zoomToPoint({ x: canvas.getWidth() / 2, y: canvas.getHeight() / 2 }, zoom);
+             } else if ((e.ctrlKey || e.metaKey) && e.key === '-') {
+                 e.preventDefault();
+                 let zoom = canvas.getZoom();
+                 zoom /= 1.2;
+                 if (zoom < 0.01) zoom = 0.01;
+                 canvas.zoomToPoint({ x: canvas.getWidth() / 2, y: canvas.getHeight() / 2 }, zoom);
+             } else if ((e.ctrlKey || e.metaKey) && e.key === '0') {
+                 e.preventDefault();
+                 canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
              }
         });
 
