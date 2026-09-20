@@ -1207,6 +1207,16 @@ document.addEventListener("DOMContentLoaded", () => {
             canvas.requestRenderAll();
         });
 
+        document.getElementById("btn-select-all")?.addEventListener("click", () => {
+            const selectableObjects = canvas.getObjects().filter(obj => !obj.is_background && obj.selectable);
+            if (selectableObjects.length > 0) {
+                canvas.discardActiveObject();
+                const sel = new fabric.ActiveSelection(selectableObjects, { canvas: canvas });
+                canvas.setActiveObject(sel);
+                canvas.requestRenderAll();
+            }
+        });
+
         function alignObjects(alignment) {
             const activeObject = canvas.getActiveObject();
             if (!activeObject || activeObject.type !== 'activeSelection') {
