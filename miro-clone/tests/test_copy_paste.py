@@ -43,7 +43,7 @@ def test_copy_paste_playwright(app_server):
         page.goto("http://127.0.0.1:8001/")
 
         # Login
-        page.fill("#board-id-input", "copy_paste_board")
+        page.fill("#board-id-input", f"copy_paste_board_{uuid.uuid4()}")
         username = f"user_{uuid.uuid4()}"
         page.fill("#nickname-input", username)
         page.fill("#password-input", "password123")
@@ -51,6 +51,9 @@ def test_copy_paste_playwright(app_server):
 
         # Wait for canvas
         page.wait_for_selector("#canvas-container", state="visible")
+        page.evaluate("""() => {
+            window.canvas.clear();
+        }""")
 
         # Add a rectangle
         page.click("#btn-rect")
@@ -77,7 +80,7 @@ def test_copy_paste_playwright(app_server):
 
         # Verify objects on canvas
         objects = page.evaluate("""() => {
-            return window.canvas.getObjects().map(o => ({ type: o.type, left: o.left, top: o.top, id: o.id }));
+            return window.canvas.getObjects().filter(o => !o.is_background).map(o => ({ type: o.type, left: o.left, top: o.top, id: o.id }));
         }""")
 
         assert len(objects) == 2
@@ -110,7 +113,7 @@ def test_copy_paste_playwright(app_server):
 
         # Verify objects on canvas
         objects2 = page.evaluate("""() => {
-            return window.canvas.getObjects().map(o => ({ type: o.type, left: o.left, top: o.top, id: o.id }));
+            return window.canvas.getObjects().filter(o => !o.is_background).map(o => ({ type: o.type, left: o.left, top: o.top, id: o.id }));
         }""")
 
         # Should now have 4 objects total

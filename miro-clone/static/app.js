@@ -1129,6 +1129,28 @@ document.addEventListener("DOMContentLoaded", () => {
              }
         });
 
+        document.getElementById("btn-delete")?.addEventListener("click", () => {
+            const activeObjects = canvas.getActiveObjects();
+            if (activeObjects.length > 0) {
+                const removedObjects = [];
+                activeObjects.forEach(obj => {
+                    if (isProcessingSync) return;
+                    removedObjects.push(obj.toObject(TO_OBJECT_PROPS));
+                    ws.send(JSON.stringify({
+                        action: 'remove',
+                        object: { id: obj.id }
+                    }));
+                    canvas.remove(obj);
+                });
+                if (removedObjects.length > 0) {
+                    pushHistory('remove', removedObjects, null);
+                }
+                canvas.discardActiveObject();
+                canvas.requestRenderAll();
+                updateMinimap();
+            }
+        });
+
         document.getElementById("btn-front").addEventListener("click", () => {
              const activeObject = canvas.getActiveObject();
              if (activeObject) {

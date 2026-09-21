@@ -1,17 +1,21 @@
-from playwright.sync_api import sync_playwright, expect
+import os
 import threading
 import time
-import uvicorn
-from src.main import app
-import os
 import uuid
 
+import uvicorn
+from playwright.sync_api import sync_playwright
+
+from src.main import app
+
 os.environ["TESTING"] = "1"
+
 
 def run_server():
     config = uvicorn.Config(app, host="127.0.0.1", port=8003, log_level="error")
     server = uvicorn.Server(config)
     server.run()
+
 
 if __name__ == "__main__":
     server_thread = threading.Thread(target=run_server, daemon=True)
