@@ -498,6 +498,7 @@ async def test_initial_shapes_load_integrity_explicit(setup_db_sync):
     from unittest.mock import AsyncMock, MagicMock, patch
 
     from sqlalchemy.exc import IntegrityError
+
     # We will simulate a concurrent insert exception by directly mocking the db execute temporarily.
     from sqlalchemy.ext.asyncio import AsyncSession
 

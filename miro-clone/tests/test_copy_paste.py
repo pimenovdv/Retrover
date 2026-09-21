@@ -55,7 +55,6 @@ def test_copy_paste_playwright(app_server):
             window.canvas.clear();
         }""")
 
-
         # Add a rectangle
         page.click("#btn-rect")
         page.wait_for_timeout(1000)  # give it time to render and send WS

@@ -11,6 +11,7 @@ os.environ["TESTING"] = "1"
     os.environ.get("CI") == "true", reason="Playwright tests are skipped in CI"
 )
 @pytest.mark.asyncio
+@pytest.mark.skipif(os.environ.get("CI") == "true", reason="Skipping UI tests in CI")
 async def test_laser_pointer():
     import socket
     import threading

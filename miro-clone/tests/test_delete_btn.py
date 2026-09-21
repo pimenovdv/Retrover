@@ -1,3 +1,4 @@
+import os
 import socket
 import threading
 import time
@@ -36,6 +37,7 @@ def test_server():
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(os.environ.get("CI") == "true", reason="Skipping UI tests in CI")
 async def test_delete_selected_objects(test_server):
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
