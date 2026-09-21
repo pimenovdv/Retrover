@@ -11,12 +11,14 @@ os.environ["TESTING"] = "1"
 
 from src.main import app
 
+
 def get_free_port():
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind(("", 0))
     port = s.getsockname()[1]
     s.close()
     return port
+
 
 @pytest.fixture(scope="module")
 def test_server():
