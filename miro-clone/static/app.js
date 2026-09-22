@@ -407,6 +407,15 @@ document.addEventListener("DOMContentLoaded", () => {
             canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
         });
 
+        document.getElementById("btn-toggle-minimap").addEventListener("click", () => {
+            const minimapContainer = document.getElementById('minimap-container');
+            if (minimapContainer.style.display === "none") {
+                minimapContainer.style.display = "block";
+            } else {
+                minimapContainer.style.display = "none";
+            }
+        });
+
         // Infinite Canvas: Pan
         let isDragging = false;
         let lastPosX = 0;
