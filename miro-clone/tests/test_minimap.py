@@ -76,4 +76,13 @@ def test_minimap(server):
             initial_vpt[4] != new_vpt[4] or initial_vpt[5] != new_vpt[5]
         ), "Viewport should have changed after clicking minimap"
 
+        # Test toggle minimap button
+        page.click("#btn-toggle-minimap")
+        page.wait_for_timeout(200)
+        assert not minimap_container.is_visible()
+
+        page.click("#btn-toggle-minimap")
+        page.wait_for_timeout(200)
+        assert minimap_container.is_visible()
+
         browser.close()
