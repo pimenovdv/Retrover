@@ -886,7 +886,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         document.getElementById("btn-embed").addEventListener("click", () => {
              if (!canEdit) return;
-             let url = prompt("Enter YouTube or Vimeo URL:");
+             let url = prompt("Enter embed URL (YouTube, Vimeo, Google Docs, etc.):");
              if (!url) return;
 
              if (!url.startsWith("http://") && !url.startsWith("https://")) {
@@ -905,8 +905,7 @@ document.addEventListener("DOMContentLoaded", () => {
                      const videoId = url.split("vimeo.com/")[1].split("?")[0];
                      embedUrl = `https://player.vimeo.com/video/${videoId}`;
                  } else {
-                     alert("Invalid or unsupported URL. Please use YouTube or Vimeo.");
-                     return;
+                     embedUrl = url;
                  }
              } catch (e) {
                  alert("Invalid URL format.");
