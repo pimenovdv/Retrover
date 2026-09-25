@@ -69,3 +69,36 @@ def test_embed_video(server):
         assert "youtube.com/embed/dQw4w9WgXcQ" in iframe_src
 
         browser.close()
+
+
+@pytest.mark.skipif(os.environ.get("CI") == "true", reason="Skip UI tests in CI")
+def test_embed_generic_iframe(server):
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
+
+        page.goto(f"http://127.0.0.1:{server}")
+
+        # Login
+        test_user = f"user_{uuid.uuid4().hex[:8]}"
+        page.fill("#nickname-input", test_user)
+        page.fill("#password-input", "testpass")
+        page.fill("#board-id-input", f"board_{uuid.uuid4().hex[:8]}")
+        page.click("#register-btn")
+
+        page.wait_for_selector("#canvas-container", state="visible")
+
+        # Override prompt to simulate entering a URL
+        test_url = "https://docs.google.com/document/d/123/edit"
+        page.evaluate(f"window.prompt = () => '{test_url}';")
+
+        # Click Embed Iframe
+        page.click("#btn-embed")
+
+        # Verify an iframe was added
+        page.wait_for_selector("#iframe-container iframe", state="visible")
+
+        iframe_src = page.eval_on_selector("#iframe-container iframe", "el => el.src")
+        assert test_url in iframe_src
+
+        browser.close()
