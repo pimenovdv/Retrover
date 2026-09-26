@@ -1,4 +1,14 @@
 import asyncio
+
+
+def get_free_port():
+    import socket
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(("", 0))
+    port = s.getsockname()[1]
+    s.close()
+    return port
+
 import os
 import sys
 import threading
@@ -39,7 +49,8 @@ def setup_db_sync():
 @pytest.fixture(scope="module")
 def test_server():
     os.environ["TESTING"] = "1"
-    config = uvicorn.Config(app=app, host="127.0.0.1", port=8002, log_level="error")
+    port = get_free_port()
+    config = uvicorn.Config(app=app, host="127.0.0.1", port=port, log_level="error")
     server = uvicorn.Server(config)
 
     thread = threading.Thread(target=server.run)
@@ -48,7 +59,9 @@ def test_server():
 
     time.sleep(2)
 
-    yield "http://127.0.0.1:8002"
+    port = server.config.port
+    port = server.config.port
+    yield f"http://127.0.0.1:{port}"
 
     server.should_exit = True
     thread.join(timeout=2)
