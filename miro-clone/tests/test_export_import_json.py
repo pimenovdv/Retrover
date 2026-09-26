@@ -39,7 +39,9 @@ def test_export_import_json(test_server, tmp_path):
 
         # Login
         username = str(uuid.uuid4())
+        board_id = str(uuid.uuid4())
         page.goto(f"http://127.0.0.1:{test_server}/")
+        page.fill("#board-id-input", board_id)
         page.fill("#nickname-input", username)
         page.fill("#password-input", "testpass")
         page.click("#register-btn")

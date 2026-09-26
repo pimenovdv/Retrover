@@ -826,6 +826,9 @@ document.addEventListener("DOMContentLoaded", () => {
                  // Remove the drawn path
                  canvas.remove(path);
 
+                 // Do not send to backend
+                 path.set({ id: 'temp_lasso' });
+
                  // Get path bounds
                  const pathPoints = path.path.map(p => {
                      // free drawing paths already have absolute coordinates! DO NOT ADD path.left and path.top
