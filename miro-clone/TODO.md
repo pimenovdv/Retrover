@@ -1,12 +1,10 @@
 # TODO for Miro Clone
 
 ## Completed Features
-- Core collaboration, UI/UX, History, Import/Export, Tools, Templates, Shortcuts (including Zoom), Formatting, Select All UI button.
+- Core collaboration, UI/UX, History, Import/Export, Tools, Templates, Shortcuts (including Zoom), Formatting, Select All UI button, Delete UI button, Minimap toggle, Iframe embedding, Lasso Tool.
 
 ## To-Do
 
 ### Newly Planned Features
-- [x] Add a "Delete" UI button (`#btn-delete`) to the toolbar for deleting selected objects on the canvas.
-- [x] Add a minimap toggle button (`#btn-toggle-minimap`) to the toolbar to show/hide the minimap.
-- [ ] Implement a lasso tool for selecting multiple objects.
-- [x] Add support for embedding iframes (e.g. Google Docs).
+- [ ] Implement text search and replace functionality across board shapes.
+- [ ] Add copy/paste support for images via clipboard.
