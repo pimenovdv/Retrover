@@ -819,7 +819,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         // Add ID to freehand paths
-        canvas.on('path:created', (e) => {
+canvas.on('path:created', (e) => {
              const path = e.path;
 
              if (isLassoMode) {

@@ -8,3 +8,5 @@
 ### Newly Planned Features
 - [ ] Implement text search and replace functionality across board shapes.
 - [ ] Add copy/paste support for images via clipboard.
+- [ ] Add Sticky Note Colors
+- [ ] Implement a grid background toggle
