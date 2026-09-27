@@ -32,7 +32,6 @@ def test_server():
     thread.start()
     time.sleep(1)
     port = server.config.port
-    port = server.config.port
     yield f"http://127.0.0.1:{port}"
     server.should_exit = True
     thread.join(timeout=5)

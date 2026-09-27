@@ -1,3 +1,4 @@
+import asyncio
 import os
 import socket
 import sys
@@ -55,7 +56,7 @@ async def test_lasso(server_url):
 
         # Register and login
         username = f"user_{uuid.uuid4().hex[:8]}"
-        await page.fill("#board-id-input", "test_board_lasso_0da20cba")
+        await page.fill("#board-id-input", f"test_board_lasso_{uuid.uuid4().hex[:8]}")
         await page.fill("#nickname-input", username)
         await page.fill("#password-input", "password123")
         await page.click("#register-btn")
@@ -97,9 +98,9 @@ async def test_lasso(server_url):
             window.canvas.fire('path:created', { path: path });
         }""")
 
-        # The lasso logic should have grouped the rect into an ActiveSelection but keep drawing mode ON
+        # The lasso logic should have grouped the rect into an ActiveSelection and turn drawing mode OFF
         is_drawing_mode_after = await page.evaluate("window.canvas.isDrawingMode")
-        assert is_drawing_mode_after is True
+        assert is_drawing_mode_after is False
 
         active_objects_len = await page.evaluate(
             "window.canvas.getActiveObjects().length"

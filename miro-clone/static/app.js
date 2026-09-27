@@ -864,7 +864,20 @@ document.addEventListener("DOMContentLoaded", () => {
                      canvas.requestRenderAll();
                  }
 
-                 // keep lasso mode on for further lassos until untoggled
+                 // Turn off lasso mode after a selection to allow the user to immediately manipulate the objects
+                 if (isLassoMode) {
+                     isLassoMode = false;
+                     window.isLassoMode = isLassoMode;
+                     canvas.isDrawingMode = isLassoMode;
+                     document.getElementById("btn-lasso").style.backgroundColor = '#f0f0f0';
+                     canvas.requestRenderAll();
+                     // Re-select the objects since disabling drawing mode might clear selection
+                     if (selectedObjects.length > 0) {
+                         const newSel = new fabric.ActiveSelection(selectedObjects, { canvas: canvas });
+                         canvas.setActiveObject(newSel);
+                         canvas.requestRenderAll();
+                     }
+                 }
                  return;
              }
 
