@@ -1,3 +1,4 @@
+import socket
 import os
 import threading
 import time
@@ -16,7 +17,11 @@ def app_server():
 
     from src.main import app
 
-    config = uvicorn.Config(app, host="127.0.0.1", port=8001, log_level="error")
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.bind(("", 0))
+    port = sock.getsockname()[1]
+    sock.close()
+    config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="error")
     server = uvicorn.Server(config)
 
     thread = threading.Thread(target=server.run, daemon=True)
@@ -24,7 +29,7 @@ def app_server():
 
     # Wait for server to start
     time.sleep(1)
-    yield "http://127.0.0.1:8001"
+    yield f"http://127.0.0.1:{port}"
 
     # Cleanup
     server.should_exit = True

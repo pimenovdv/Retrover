@@ -1,3 +1,4 @@
+import socket
 import os
 import threading
 import uuid
@@ -15,7 +16,11 @@ def setup_test_env():
 def app_server():
     from src.main import app
 
-    config = uvicorn.Config(app=app, host="127.0.0.1", port=8001, log_level="info")
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.bind(("", 0))
+    port = sock.getsockname()[1]
+    sock.close()
+    config = uvicorn.Config(app=app, host="127.0.0.1", port=port, log_level="info")
     server = uvicorn.Server(config)
 
     thread = threading.Thread(target=server.run, daemon=True)
@@ -25,7 +30,7 @@ def app_server():
 
     time.sleep(1)  # wait for server to start
 
-    yield
+    yield f"http://127.0.0.1:{port}/"
 
     server.should_exit = True
     thread.join()
@@ -40,7 +45,7 @@ def test_copy_paste_playwright(app_server):
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
-        page.goto("http://127.0.0.1:8001/")
+        page.goto(app_server)
 
         # Login
         page.fill("#board-id-input", f"copy_paste_board_{uuid.uuid4()}")

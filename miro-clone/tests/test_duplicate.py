@@ -1,3 +1,4 @@
+import socket
 import asyncio
 import os
 import threading
@@ -14,8 +15,8 @@ from src.database import Base, engine
 from src.main import app
 
 
-def run_server():
-    config = uvicorn.Config(app, host="127.0.0.1", port=8001, log_level="info")
+def run_server(port):
+    config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="info")
     server = uvicorn.Server(config)
     server.run()
 
@@ -36,12 +37,16 @@ def test_server():
     loop.run_until_complete(init_db())
     loop.close()
 
-    thread = threading.Thread(target=run_server, daemon=True)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.bind(("", 0))
+    port = sock.getsockname()[1]
+    sock.close()
+    thread = threading.Thread(target=run_server, args=(port,), daemon=True)
     thread.start()
     import time
 
     time.sleep(2)  # wait for server to start
-    yield
+    yield f"http://127.0.0.1:{port}"
 
     loop = asyncio.new_event_loop()
     loop.run_until_complete(drop_db())
@@ -53,7 +58,7 @@ def test_duplicate_button_and_shortcut(test_server):
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
-        page.goto("http://127.0.0.1:8001")
+        page.goto(test_server)
 
         board_id = f"test-dup-board-{uuid.uuid4()}"
         username = f"test-dup-user-{uuid.uuid4()}"
