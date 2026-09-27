@@ -14,34 +14,30 @@ from src.database import Base, engine
 from src.main import app
 
 
-def run_server():
-    config = uvicorn.Config(app, host="127.0.0.1", port=8002, log_level="info")
-    server = uvicorn.Server(config)
-    server.run()
-
-
-async def init_db():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-
-async def drop_db():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-
-
 @pytest.fixture(scope="module")
 def test_server():
-    asyncio.run(init_db())
-    thread = threading.Thread(target=run_server, daemon=True)
-    thread.start()
+    import threading
     import time
+    import uvicorn
+    import socket
+    from src.main import app
 
-    time.sleep(1)  # wait for server to start
-    yield
-    # We can't easily kill uvicorn server thread cleanly here without keeping a reference to it
-    # But as it's a daemon thread, it will die when the test process dies.
-    asyncio.run(drop_db())
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(("", 0))
+    port = s.getsockname()[1]
+    s.close()
+
+    config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="info")
+    server = uvicorn.Server(config)
+
+    thread = threading.Thread(target=server.run)
+    thread.start()
+    time.sleep(1)
+
+    yield f"http://127.0.0.1:{port}"
+
+    server.should_exit = True
+    thread.join()
 
 
 @pytest.mark.skipif(
@@ -54,7 +50,7 @@ def test_alignment(test_server):
         page = browser.new_page()
 
         test_username = f"testuser_{uuid.uuid4().hex}"
-        page.goto("http://127.0.0.1:8002/?board=alignment_board")
+        page.goto(f"{test_server}/?board=alignment_board_{uuid.uuid4().hex[:8]}")
 
         page.wait_for_selector("#login-modal", state="visible")
         page.fill("#nickname-input", test_username)
