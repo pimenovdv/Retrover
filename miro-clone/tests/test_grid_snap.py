@@ -13,19 +13,25 @@ def setup_test_env():
 
 @pytest.fixture(scope="module")
 def app_server():
+    import threading
+    import time
+    import uvicorn
+    import socket
     from src.main import app
 
-    config = uvicorn.Config(app=app, host="127.0.0.1", port=8002, log_level="info")
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(("", 0))
+    port = s.getsockname()[1]
+    s.close()
+
+    config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="info")
     server = uvicorn.Server(config)
 
-    thread = threading.Thread(target=server.run, daemon=True)
+    thread = threading.Thread(target=server.run)
     thread.start()
+    time.sleep(1)
 
-    import time
-
-    time.sleep(1)  # wait for server to start
-
-    yield
+    yield f"http://127.0.0.1:{port}"
 
     server.should_exit = True
     thread.join()
@@ -40,7 +46,7 @@ def test_grid_snapping(app_server):
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
-        page.goto("http://127.0.0.1:8002/")
+        page.goto(app_server)
 
         # Login
         page.fill("#board-id-input", "grid_snap_board")

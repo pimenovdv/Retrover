@@ -34,12 +34,12 @@ def test_lock_unlock(test_server):
     from playwright.sync_api import sync_playwright
 
     with sync_playwright() as p:
-        browser = p.chromium.launch()
+        browser = p.chromium.launch(headless=True)
         page = browser.new_page()
         username = str(uuid.uuid4())
         page.goto(f"http://127.0.0.1:{test_server}/")
-        page.fill("#board-id-input", f"board_{uuid.uuid4().hex[:8]}")
         page.wait_for_selector("#login-modal", state="visible")
+        page.fill("#board-id-input", f"board_{uuid.uuid4().hex[:8]}")
         page.fill("#nickname-input", username)
         page.fill("#password-input", "testpass")
         page.click("#register-btn")
