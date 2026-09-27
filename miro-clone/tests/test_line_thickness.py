@@ -43,10 +43,11 @@ async def test_line_thickness_control(test_server):
         browser = await p.chromium.launch(headless=True)
         page = await browser.new_page()
         await page.goto(test_server)
+        await page.wait_for_selector("#login-modal", state="visible")
 
         # Login
         username = f"user_{uuid.uuid4().hex[:8]}"
-        await page.fill("#board-id-input", "test-board")
+        await page.fill("#board-id-input", f"test-board-{uuid.uuid4().hex[:8]}")
         await page.fill("#nickname-input", username)
         await page.fill("#password-input", "pass123")
         await page.click("#register-btn")

@@ -14,19 +14,26 @@ from src.main import app
 
 @pytest.fixture(scope="module")
 def server():
-    # Run the server in a background thread
-    config = uvicorn.Config(app, host="127.0.0.1", port=8001, log_level="info")
+    import threading
+    import time
+    import uvicorn
+    import socket
+    from src.main import app
+
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(("", 0))
+    port = s.getsockname()[1]
+    s.close()
+
+    config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="info")
     server = uvicorn.Server(config)
 
     thread = threading.Thread(target=server.run)
     thread.start()
-
-    # Wait for server to start
     time.sleep(1)
 
-    yield
+    yield f"http://127.0.0.1:{port}"
 
-    # Teardown
     server.should_exit = True
     thread.join()
 
@@ -41,10 +48,11 @@ def test_minimap(server):
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
-        page.goto("http://127.0.0.1:8001")
+        page.goto(server)
 
         # Login
-        page.fill("#board-id-input", "test_board")
+        page.wait_for_selector("#login-modal", state="visible")
+        page.fill("#board-id-input", "test_board_a33f7059")
         username = f"user_{uuid.uuid4()}"
         page.fill("#nickname-input", username)
         page.fill("#password-input", "password123")

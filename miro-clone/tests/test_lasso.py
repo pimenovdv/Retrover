@@ -55,7 +55,7 @@ async def test_lasso(server_url):
 
         # Register and login
         username = f"user_{uuid.uuid4().hex[:8]}"
-        await page.fill("#board-id-input", "test_board_lasso")
+        await page.fill("#board-id-input", "test_board_lasso_0da20cba")
         await page.fill("#nickname-input", username)
         await page.fill("#password-input", "password123")
         await page.click("#register-btn")
