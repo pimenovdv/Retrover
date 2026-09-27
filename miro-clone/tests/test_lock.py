@@ -121,7 +121,7 @@ async def test_lock_unlock_shortcut(test_server):
         browser = await p.chromium.launch(headless=True)
         page = await browser.new_page()
         await page.goto(f"http://127.0.0.1:{test_server}/")
-        page.wait_for_selector("#login-modal", state="visible")
+        await page.wait_for_selector("#login-modal", state="visible")
 
         username = f"user_{uuid.uuid4().hex[:8]}"
         await page.fill("#nickname-input", username)

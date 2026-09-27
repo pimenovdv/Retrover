@@ -51,7 +51,7 @@ async def test_lasso(server_url):
                 await page.goto(server_url)
                 break
             except Exception:
-                time.sleep(1)
+                await asyncio.sleep(1)
 
         # Register and login
         username = f"user_{uuid.uuid4().hex[:8]}"
