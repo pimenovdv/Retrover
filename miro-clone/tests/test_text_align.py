@@ -1,4 +1,9 @@
 import os
+import uuid
+
+import pytest
+
+os.environ["TESTING"] = "1"
 
 
 def get_free_port():
@@ -8,13 +13,6 @@ def get_free_port():
     port = s.getsockname()[1]
     s.close()
     return port
-
-import uuid
-
-import pytest
-
-os.environ["TESTING"] = "1"
-
 
 @pytest.fixture
 def test_server():

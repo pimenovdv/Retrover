@@ -1,14 +1,4 @@
 import asyncio
-
-
-def get_free_port():
-    import socket
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.bind(("", 0))
-    port = s.getsockname()[1]
-    s.close()
-    return port
-
 import os
 import sys
 import threading
@@ -23,6 +13,14 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 from src.database import Base, engine
 from src.main import app
 
+
+def get_free_port():
+    import socket
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(("", 0))
+    port = s.getsockname()[1]
+    s.close()
+    return port
 
 @pytest.fixture(autouse=True, scope="module")
 def setup_db_sync():

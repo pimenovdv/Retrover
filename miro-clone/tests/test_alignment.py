@@ -1,4 +1,3 @@
-import asyncio
 import os
 import threading
 import uuid
@@ -10,17 +9,13 @@ os.environ["TESTING"] = "1"
 
 import uvicorn
 
-from src.database import Base, engine
 from src.main import app
 
 
 @pytest.fixture(scope="module")
 def test_server():
-    import threading
-    import time
-    import uvicorn
     import socket
-    from src.main import app
+    import time
 
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind(("", 0))

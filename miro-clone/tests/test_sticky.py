@@ -1,4 +1,9 @@
 import os
+import threading
+import uuid
+
+import pytest
+import uvicorn
 
 
 def get_free_port():
@@ -8,13 +13,6 @@ def get_free_port():
     port = s.getsockname()[1]
     s.close()
     return port
-
-import threading
-import uuid
-
-import pytest
-import uvicorn
-
 
 @pytest.fixture(scope="module", autouse=True)
 def setup_test_env():

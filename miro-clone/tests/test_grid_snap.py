@@ -13,10 +13,9 @@ def setup_test_env():
 
 @pytest.fixture(scope="module")
 def app_server():
-    import threading
-    import time
-    import uvicorn
     import socket
+    import time
+
     from src.main import app
 
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
