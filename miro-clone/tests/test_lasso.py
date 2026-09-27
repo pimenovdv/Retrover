@@ -1,4 +1,3 @@
-import os
 import socket
 import threading
 import time
@@ -89,7 +88,7 @@ async def test_lasso_tool(test_server):
             window.canvas.fire('path:created', { path: path });
         """)
 
-        await page.wait_for_timeout(1000) # wait for path:created logic to run
+        await page.wait_for_timeout(1000)  # wait for path:created logic to run
 
         # Verify active selection
         selection_info = await page.evaluate("""
