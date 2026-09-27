@@ -42,9 +42,11 @@ document.addEventListener("DOMContentLoaded", () => {
     let redoStack = [];
     let isEraserMode = false;
     let isLaserMode = false;
+    let isLassoMode = false;
 
     window.isEraserMode = isEraserMode;
     window.isLaserMode = isLaserMode;
+    window.isLassoMode = isLassoMode;
     window.undoStack = undoStack;
     window.redoStack = redoStack;
 
@@ -737,47 +739,158 @@ document.addEventListener("DOMContentLoaded", () => {
         const btnFreehand = document.getElementById("btn-freehand");
         const btnEraser = document.getElementById("btn-eraser");
         const btnLaser = document.getElementById("btn-laser");
+        const btnLasso = document.getElementById("btn-lasso");
 
         btnFreehand.addEventListener("click", () => {
              isEraserMode = false;
              isLaserMode = false;
+             isLassoMode = false;
+             window.isLassoMode = isLassoMode;
              window.isEraserMode = isEraserMode;
              window.isLaserMode = isLaserMode;
              canvas.isDrawingMode = !canvas.isDrawingMode;
              btnFreehand.style.backgroundColor = canvas.isDrawingMode ? '#ccc' : '#f0f0f0';
              btnEraser.style.backgroundColor = '#f0f0f0';
              btnLaser.style.backgroundColor = '#f0f0f0';
+             btnLasso.style.backgroundColor = '#f0f0f0';
+             canvas.freeDrawingBrush.color = '#000000'; // Reset drawing color
+             canvas.freeDrawingBrush.width = 2;
         });
 
         btnEraser.addEventListener("click", () => {
              isEraserMode = !isEraserMode;
              isLaserMode = false;
+             isLassoMode = false;
+             window.isLassoMode = isLassoMode;
              window.isEraserMode = isEraserMode;
              window.isLaserMode = isLaserMode;
              canvas.isDrawingMode = isEraserMode;
              btnEraser.style.backgroundColor = isEraserMode ? '#ccc' : '#f0f0f0';
              btnFreehand.style.backgroundColor = '#f0f0f0';
              btnLaser.style.backgroundColor = '#f0f0f0';
+             btnLasso.style.backgroundColor = '#f0f0f0';
+             canvas.freeDrawingBrush.color = '#000000';
+             canvas.freeDrawingBrush.width = 2;
         });
 
         btnLaser.addEventListener("click", () => {
              isLaserMode = !isLaserMode;
              isEraserMode = false;
+             isLassoMode = false;
+             window.isLassoMode = isLassoMode;
              window.isLaserMode = isLaserMode;
              window.isEraserMode = isEraserMode;
              canvas.isDrawingMode = false;
              btnLaser.style.backgroundColor = isLaserMode ? '#ccc' : '#f0f0f0';
              btnFreehand.style.backgroundColor = '#f0f0f0';
              btnEraser.style.backgroundColor = '#f0f0f0';
+             btnLasso.style.backgroundColor = '#f0f0f0';
              if (isLaserMode) {
                  canvas.discardActiveObject();
                  canvas.requestRenderAll();
              }
         });
 
+        btnLasso.addEventListener("click", () => {
+             isLassoMode = !isLassoMode;
+             isEraserMode = false;
+             isLaserMode = false;
+             window.isLassoMode = isLassoMode;
+             window.isEraserMode = isEraserMode;
+             window.isLaserMode = isLaserMode;
+             canvas.isDrawingMode = isLassoMode;
+
+             btnLasso.style.backgroundColor = isLassoMode ? '#ccc' : '#f0f0f0';
+             btnFreehand.style.backgroundColor = '#f0f0f0';
+             btnEraser.style.backgroundColor = '#f0f0f0';
+             btnLaser.style.backgroundColor = '#f0f0f0';
+
+             if (isLassoMode) {
+                 canvas.freeDrawingBrush.color = 'rgba(0, 0, 255, 0.5)'; // Blue semi-transparent
+                 canvas.freeDrawingBrush.width = 2;
+                 // Set dashed array if possible
+                 if (canvas.freeDrawingBrush.getPatternSrc) {
+                     // Default Fabric pencil doesn't support dash easily, just color is ok
+                 }
+             } else {
+                 canvas.freeDrawingBrush.color = '#000000'; // Reset
+                 canvas.freeDrawingBrush.width = 2;
+             }
+        });
+
+        // Point in polygon helper
+        function pointInPolygon(point, vs) {
+            var x = point.x, y = point.y;
+            var inside = false;
+            for (var i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+                var xi = vs[i].x, yi = vs[i].y;
+                var xj = vs[j].x, yj = vs[j].y;
+                var intersect = ((yi > y) != (yj > y))
+                    && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+                if (intersect) inside = !inside;
+            }
+            return inside;
+        }
+
         // Add ID to freehand paths
-        canvas.on('path:created', (e) => {
+canvas.on('path:created', (e) => {
              const path = e.path;
+
+             if (isLassoMode) {
+                 // Convert path data to points
+                 const points = [];
+                 for (let i = 0; i < path.path.length; i++) {
+                     const segment = path.path[i];
+                     if (segment[0] === 'M' || segment[0] === 'L') {
+                         points.push({ x: segment[1], y: segment[2] });
+                     } else if (segment[0] === 'Q') {
+                         points.push({ x: segment[3], y: segment[4] });
+                     } else if (segment[0] === 'C') {
+                         points.push({ x: segment[5], y: segment[6] });
+                     }
+                 }
+
+                 const selectedObjects = [];
+                 const allObjects = canvas.getObjects();
+
+                 for (let i = 0; i < allObjects.length; i++) {
+                     const obj = allObjects[i];
+                     if (obj === path || !obj.selectable || obj.type === 'activeSelection') continue;
+
+                     // Get bounding box points in global coords
+                     const bound = obj.getBoundingRect(true, true);
+                     const centerX = bound.left + bound.width / 2;
+                     const centerY = bound.top + bound.height / 2;
+
+                     if (pointInPolygon({x: centerX, y: centerY}, points)) {
+                         selectedObjects.push(obj);
+                     }
+                 }
+
+                 // Immediately remove the drawn lasso path and give it a temp id so it doesn't get synced
+                 path.set({ id: 'temp-lasso-' + uuidv4() });
+                 canvas.remove(path);
+
+                 canvas.isDrawingMode = false; // MUST set this before setting active selection, or else selection is discarded
+                 isLassoMode = false;
+                 window.isLassoMode = false;
+                 btnLasso.style.backgroundColor = '#f0f0f0';
+                 canvas.freeDrawingBrush.color = '#000000';
+
+                 if (selectedObjects.length > 1) {
+                     canvas.discardActiveObject();
+                     const sel = new fabric.ActiveSelection(selectedObjects, {
+                         canvas: canvas
+                     });
+                     canvas.setActiveObject(sel);
+                 } else if (selectedObjects.length === 1) {
+                     canvas.setActiveObject(selectedObjects[0]);
+                 }
+
+                 canvas.requestRenderAll();
+                 return;
+             }
+
              path.set({ id: uuidv4() });
              if (isEraserMode) {
                  path.set({ globalCompositeOperation: 'destination-out' });
