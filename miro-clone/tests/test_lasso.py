@@ -45,7 +45,6 @@ async def test_lasso(server_url):
         context = await browser.new_context()
         page = await context.new_page()
 
-
         for _ in range(10):
             try:
                 await page.goto(server_url)
