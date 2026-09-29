@@ -24,7 +24,7 @@ def test_server():
     server = uvicorn.Server(config)
     thread = threading.Thread(target=server.run, daemon=True)
     thread.start()
-    time.sleep(1)
+    time.sleep(2)
     yield port
     server.should_exit = True
     thread.join(timeout=5)

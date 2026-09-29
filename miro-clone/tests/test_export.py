@@ -21,7 +21,7 @@ def server():
     thread.start()
     import time
 
-    time.sleep(1)  # wait for server to start
+    time.sleep(2)  # wait for server to start
     yield
     # No explicit shutdown needed as it's a daemon thread
 

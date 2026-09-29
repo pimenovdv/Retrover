@@ -28,7 +28,7 @@ def test_server():
     thread = threading.Thread(target=server.run, daemon=True)
     thread.start()
 
-    time.sleep(1)  # Wait for server to start
+    time.sleep(2)  # Wait for server to start
 
     yield f"http://127.0.0.1:{port}"
 

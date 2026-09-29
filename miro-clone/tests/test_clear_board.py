@@ -11,18 +11,22 @@ os.environ["TESTING"] = "1"
 from src.main import app
 
 
-def run_server():
-    config = uvicorn.Config(app, host="127.0.0.1", port=8002, log_level="warning")
-    server = uvicorn.Server(config)
-    server.run()
-
-
-@pytest.fixture(scope="module")
+@pytest.fixture
 def test_server():
-    thread = threading.Thread(target=run_server, daemon=True)
+    import socket
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(("", 0))
+    port = s.getsockname()[1]
+    s.close()
+
+    config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning")
+    server = uvicorn.Server(config)
+    thread = threading.Thread(target=server.run, daemon=True)
     thread.start()
     time.sleep(2)
-    yield
+    yield f"http://127.0.0.1:{port}"
+    server.should_exit = True
+    thread.join(timeout=5)
 
 
 @pytest.mark.asyncio
@@ -34,7 +38,7 @@ async def test_clear_board(test_server):
         browser = await p.chromium.launch(headless=True)
         page = await browser.new_page()
 
-        await page.goto("http://127.0.0.1:8002/")
+        await page.goto(test_server)
 
         # Login
         await page.fill("#board-id-input", f"clear_board_test_{uuid.uuid4()}")

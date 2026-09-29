@@ -22,7 +22,7 @@ def server():
     thread.start()
 
     # Wait for server to start
-    time.sleep(1)
+    time.sleep(2)
 
     yield
 

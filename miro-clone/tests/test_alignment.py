@@ -37,7 +37,7 @@ def test_server():
     thread.start()
     import time
 
-    time.sleep(1)  # wait for server to start
+    time.sleep(2)  # wait for server to start
     yield
     # We can't easily kill uvicorn server thread cleanly here without keeping a reference to it
     # But as it's a daemon thread, it will die when the test process dies.

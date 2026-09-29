@@ -29,7 +29,7 @@ def test_server():
     thread.start()
 
     # Wait for server to start
-    time.sleep(1)
+    time.sleep(2)
 
     yield f"http://127.0.0.1:{port}"
 

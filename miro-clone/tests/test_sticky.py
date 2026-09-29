@@ -23,7 +23,7 @@ def app_server():
 
     import time
 
-    time.sleep(1)  # wait for server to start
+    time.sleep(2)  # wait for server to start
 
     yield
 

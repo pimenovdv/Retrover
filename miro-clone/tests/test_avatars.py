@@ -30,7 +30,7 @@ def server():
 
     import time
 
-    time.sleep(1)
+    time.sleep(2)
 
     yield port
 

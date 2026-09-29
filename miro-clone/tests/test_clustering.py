@@ -30,7 +30,7 @@ def app_server():
     server = uvicorn.Server(config)
     thread = threading.Thread(target=server.run, daemon=True)
     thread.start()
-    time.sleep(1)
+    time.sleep(2)
 
     yield port
 
