@@ -23,7 +23,7 @@ def app_server():
     thread.start()
 
     # Wait for server to start
-    time.sleep(1)
+    time.sleep(2)
     yield "http://127.0.0.1:8001"
 
     # Cleanup
@@ -64,7 +64,7 @@ def test_eraser_tool(app_server):
         time.sleep(0.5)
 
         # Check that path was created normally
-        time.sleep(1)  # Extra wait for enlivenObjects / ws broadcast
+        time.sleep(2)  # Extra wait for enlivenObjects / ws broadcast
         paths_count = page.evaluate("canvas.getObjects().length")
         assert paths_count > 0, f"Expected path, found {paths_count}"
 
@@ -92,7 +92,7 @@ def test_eraser_tool(app_server):
 
         time.sleep(0.5)
 
-        time.sleep(1)  # Extra wait
+        time.sleep(2)  # Extra wait
         paths_count_new = page.evaluate("canvas.getObjects().length")
         assert (
             paths_count_new > paths_count

@@ -21,7 +21,7 @@ def server_url():
     config = uvicorn.Config(app=app, host="127.0.0.1", port=port, log_level="critical")
     server = uvicorn.Server(config)
 
-    thread = threading.Thread(target=server.run)
+    thread = threading.Thread(target=server.run, daemon=True)
     thread.start()
 
     yield f"http://127.0.0.1:{port}"

@@ -2242,7 +2242,7 @@ canvas.on('path:created', (e) => {
     const btnFlipX = document.getElementById("btn-flip-x");
     const btnFlipY = document.getElementById("btn-flip-y");
 
-    window.updatePropertiesPanel = function updatePropertiesPanel() {
+    function updatePropertiesPanel() {
         let activeObject = canvas.getActiveObject();
         if (!activeObject || activeObject.type === 'activeSelection') {
             propertiesPanel.style.display = 'none';

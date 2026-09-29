@@ -24,11 +24,11 @@ def test_server():
     config = uvicorn.Config(app=app, host="127.0.0.1", port=port, log_level="error")
     server = uvicorn.Server(config)
 
-    thread = threading.Thread(target=server.run)
+    thread = threading.Thread(target=server.run, daemon=True)
     thread.start()
 
     # Wait for server to start
-    time.sleep(1)
+    time.sleep(2)
 
     yield f"http://127.0.0.1:{port}"
 
