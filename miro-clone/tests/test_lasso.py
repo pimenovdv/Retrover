@@ -33,7 +33,7 @@ def test_server():
     thread = threading.Thread(target=server.run, daemon=True)
     thread.start()
 
-    time.sleep(2)
+    time.sleep(1)
 
     yield f"http://127.0.0.1:{port}"
 
