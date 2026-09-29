@@ -111,11 +111,10 @@ def test_export_import_json(test_server, tmp_path):
         """)
 
         objects_count = page.evaluate("window.canvas.getObjects().length")
-        assert objects_count >= 1
+        assert objects_count == 1
 
         # Check if the lock state is preserved
         is_locked_after_import = page.evaluate("window.canvas.getObjects()[0].locked")
-        print(f"LOCKED STATUS: {is_locked_after_import}")
         assert is_locked_after_import
 
         browser.close()

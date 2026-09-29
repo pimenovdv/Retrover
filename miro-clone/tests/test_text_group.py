@@ -15,17 +15,12 @@ def test_server():
 
     from src.main import app
 
-    import socket
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.bind(("", 0))
-    port = s.getsockname()[1]
-    s.close()
-    config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="error")
+    config = uvicorn.Config(app, host="127.0.0.1", port=8000, log_level="error")
     server = uvicorn.Server(config)
     thread = threading.Thread(target=server.run, daemon=True)
     thread.start()
     time.sleep(2)
-    yield port
+    yield server
     server.should_exit = True
     thread.join(timeout=5)
 
@@ -38,7 +33,7 @@ async def test_rich_text_formatting(test_server):
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         page = await browser.new_page()
-        await page.goto(f"http://127.0.0.1:{test_server}/")
+        await page.goto("http://127.0.0.1:8000/")
 
         username = f"user_{uuid.uuid4().hex[:8]}"
         await page.fill("#nickname-input", username)
@@ -103,7 +98,7 @@ async def test_grouping_ungrouping(test_server):
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         page = await browser.new_page()
-        await page.goto(f"http://127.0.0.1:{test_server}/")
+        await page.goto("http://127.0.0.1:8000/")
 
         username = f"user_{uuid.uuid4().hex[:8]}"
         await page.fill("#nickname-input", username)
@@ -164,7 +159,7 @@ async def test_keyboard_grouping_shortcuts(test_server):
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         page = await browser.new_page()
-        await page.goto(f"http://127.0.0.1:{test_server}/")
+        await page.goto("http://127.0.0.1:8000/")
 
         username = f"user_{uuid.uuid4().hex[:8]}"
         await page.fill("#nickname-input", username)

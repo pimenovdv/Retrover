@@ -33,8 +33,7 @@ async def test_laser_pointer():
     server_thread = threading.Thread(target=server.run, daemon=True)
     server_thread.start()
 
-    import time
-    time.sleep(3)  # wait for server to start
+    await asyncio.sleep(1)  # wait for server to start
 
     try:
         async with async_playwright() as p:
