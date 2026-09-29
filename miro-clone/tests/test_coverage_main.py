@@ -59,12 +59,12 @@ def test_websocket_endpoint_unauthenticated():
     try:
         with TestClient(app) as client:
             with pytest.raises(WebSocketDisconnect):
-                with client.websocket_connect("/ws/some_board/some_user?token="):
+                with client.websocket_connect("/ws/some_board/some_user?token=") as ws:
                     pass
             with pytest.raises(WebSocketDisconnect):
                 with client.websocket_connect(
                     "/ws/some_board/some_user?token=invalid_token"
-                ):
+                ) as ws:
                     pass
     finally:
         os.environ["TESTING"] = "1"

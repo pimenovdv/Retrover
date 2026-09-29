@@ -77,6 +77,11 @@ async def test_add_image(test_server):
         file_chooser = await fc_info.value
         await file_chooser.set_files(dummy_img_path)
 
+        # wait for upload to finish. The test was brittle and assumed it would finish exactly in 2 seconds.
+        # Let's wait for canvas objects instead.
+        await page.wait_for_function("() => window.canvas.getObjects().filter(o => o.type === 'image' && !o.is_background).length > 0", timeout=5000)
+
+
         # Wait for the image to be processed and added to canvas
         await page.wait_for_timeout(2000)
 
