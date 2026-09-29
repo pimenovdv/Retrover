@@ -30,7 +30,7 @@ async def test_laser_pointer():
     config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="error")
     server = uvicorn.Server(config)
 
-    server_thread = threading.Thread(target=server.run)
+    server_thread = threading.Thread(target=server.run, daemon=True)
     server_thread.start()
 
     await asyncio.sleep(1)  # wait for server to start

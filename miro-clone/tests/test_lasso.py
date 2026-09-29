@@ -21,14 +21,19 @@ def get_free_port():
 
 @pytest.fixture
 def test_server():
-    port = get_free_port()
+    import socket
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(("", 0))
+    port = s.getsockname()[1]
+    s.close()
+
     config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="error")
     server = uvicorn.Server(config)
 
-    thread = threading.Thread(target=server.run)
+    thread = threading.Thread(target=server.run, daemon=True)
     thread.start()
 
-    time.sleep(1)  # Wait for server to start
+    time.sleep(2)
 
     yield f"http://127.0.0.1:{port}"
 

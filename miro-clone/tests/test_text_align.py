@@ -15,12 +15,17 @@ def test_server():
 
     from src.main import app
 
-    config = uvicorn.Config(app, host="127.0.0.1", port=8000, log_level="error")
+    import socket
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(("", 0))
+    port = s.getsockname()[1]
+    s.close()
+    config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="error")
     server = uvicorn.Server(config)
-    thread = threading.Thread(target=server.run)
+    thread = threading.Thread(target=server.run, daemon=True)
     thread.start()
     time.sleep(1)
-    yield server
+    yield port
     server.should_exit = True
     thread.join(timeout=5)
 
@@ -35,7 +40,7 @@ async def test_text_alignment(test_server):
         page = await browser.new_page()
 
         await page.set_viewport_size({"width": 1280, "height": 800})
-        await page.goto("http://127.0.0.1:8000/")
+        await page.goto(f"http://127.0.0.1:{test_server}/")
 
         username = f"user_{uuid.uuid4().hex[:8]}"
         await page.fill("#nickname-input", username)

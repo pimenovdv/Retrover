@@ -8,19 +8,27 @@ os.environ["TESTING"] = "1"
 
 @pytest.fixture
 def test_server():
+    import socket
     import threading
     import time
-
     import uvicorn
-
     from src.main import app
 
-    config = uvicorn.Config(app, host="127.0.0.1", port=8002, log_level="error")
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(("", 0))
+    port = s.getsockname()[1]
+    s.close()
+
+    config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="error")
     server = uvicorn.Server(config)
-    thread = threading.Thread(target=server.run)
+
+    thread = threading.Thread(target=server.run, daemon=True)
     thread.start()
+
     time.sleep(1)
-    yield server
+
+    yield f"http://127.0.0.1:{port}"
+
     server.should_exit = True
     thread.join(timeout=5)
 
@@ -33,7 +41,7 @@ async def test_zoom_controls(test_server):
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         page = await browser.new_page()
-        await page.goto("http://127.0.0.1:8002/")
+        await page.goto(test_server)
 
         # Login
         username = f"user_{uuid.uuid4().hex[:8]}"
