@@ -1,53 +1,64 @@
-import os
-import threading
-import time
-import uuid
-
-import uvicorn
 from playwright.sync_api import sync_playwright
+import os
+import uuid
+import subprocess
+import socket
+import time
 
-from src.main import app
+def run_cuj(page, port):
+    page.goto(f"http://127.0.0.1:{port}")
+    page.wait_for_timeout(500)
 
-os.environ["TESTING"] = "1"
+    # Login
+    username = f"user_{uuid.uuid4().hex[:8]}"
+    page.fill("#nickname-input", username)
+    page.fill("#password-input", "password")
+    page.click("#register-btn")
 
+    page.wait_for_selector("#canvas-container", state="visible")
+    page.wait_for_timeout(500)
 
-def run_server():
-    config = uvicorn.Config(app, host="127.0.0.1", port=8003, log_level="error")
-    server = uvicorn.Server(config)
-    server.run()
+    # Grid Toggle
+    page.click("#btn-grid-toggle")
+    page.wait_for_timeout(1000)
 
+    # Add Sticky Note
+    page.click("#btn-sticky")
+    page.wait_for_timeout(1000)
+
+    # Change color to green (#CCFFCC)
+    page.evaluate('document.querySelector(".sticky-color-btn[data-color=\\"#CCFFCC\\"]").click()')
+    page.wait_for_timeout(1000)
+
+    # Take screenshot at the key moment
+    page.screenshot(path="/home/jules/verification/screenshots/verification.png")
+    page.wait_for_timeout(1000)
 
 if __name__ == "__main__":
-    server_thread = threading.Thread(target=run_server, daemon=True)
-    server_thread.start()
+    os.makedirs("/home/jules/verification/videos", exist_ok=True)
+    os.makedirs("/home/jules/verification/screenshots", exist_ok=True)
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.bind(('', 0))
+    port = sock.getsockname()[1]
+    sock.close()
+
+    server_process = subprocess.Popen(["python", "-m", "uvicorn", "src.main:app", "--port", str(port)])
     time.sleep(2)
 
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        page = browser.new_page()
-        try:
-            page.goto("http://127.0.0.1:8003/")
-
-            # Login
-            username = f"user_{uuid.uuid4().hex[:8]}"
-            page.fill("#nickname-input", username)
-            page.fill("#password-input", "password")
-            page.click("#register-btn")
-
-            page.wait_for_selector("#canvas-container", state="visible")
-
-            # Zoom in with kb shortcut
-            page.keyboard.press("Control+=")
-            time.sleep(0.5)
-            page.keyboard.press("Control+=")
-            time.sleep(0.5)
-
-            # verify zoom > 1
-            zoom_val = page.evaluate("() => window.canvas.getZoom()")
-            assert zoom_val > 1
-
-            page.screenshot(path="/home/jules/verification/zoom_verification.png")
-            print("Screenshot saved to /home/jules/verification/zoom_verification.png")
-
-        finally:
-            browser.close()
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            context = browser.new_context(
+                record_video_dir="/home/jules/verification/videos",
+                viewport={"width": 1280, "height": 800}
+            )
+            page = context.new_page()
+            try:
+                run_cuj(page, port)
+            finally:
+                context.close()
+                browser.close()
+    finally:
+        server_process.terminate()
+        server_process.wait()

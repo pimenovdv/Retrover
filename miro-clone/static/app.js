@@ -26,7 +26,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let lastLaserSend = 0;
 
 
-    const TO_OBJECT_PROPS = ['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background', 'locked', 'lockMovementX', 'lockMovementY', 'lockRotation', 'lockScalingX', 'lockScalingY', 'hasControls', 'videoSrc', 'opacity', 'strokeDashArray', 'flipX', 'flipY', 'linethrough'];
+    const TO_OBJECT_PROPS = ['isStickyNote','id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background', 'locked', 'lockMovementX', 'lockMovementY', 'lockRotation', 'lockScalingX', 'lockScalingY', 'hasControls', 'videoSrc', 'opacity', 'strokeDashArray', 'flipX', 'flipY', 'linethrough'];
     window.TO_OBJECT_PROPS = TO_OBJECT_PROPS;
 
     let canvas;
@@ -200,6 +200,46 @@ document.addEventListener("DOMContentLoaded", () => {
         if (objects.length === 0) return 0;
         return Math.max(...objects.map(o => o.z_index || 0));
     }
+
+
+        // Grid background logic
+        let gridPattern = null;
+        let isGridVisible = false;
+
+        function initGridPattern() {
+            if (gridPattern) return;
+            const gridCanvas = document.createElement('canvas');
+            gridCanvas.width = 50;
+            gridCanvas.height = 50;
+            const ctx = gridCanvas.getContext('2d');
+            ctx.fillStyle = 'rgba(0, 0, 0, 0)';
+            ctx.fillRect(0, 0, 50, 50);
+            ctx.strokeStyle = '#e0e0e0';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(50, 0);
+            ctx.lineTo(50, 50);
+            ctx.lineTo(0, 50);
+            ctx.lineTo(0, 0);
+            ctx.stroke();
+
+            gridPattern = new fabric.Pattern({
+                source: gridCanvas,
+                repeat: 'repeat'
+            });
+        }
+
+        document.getElementById("btn-grid-toggle").addEventListener("click", () => {
+            initGridPattern();
+            isGridVisible = !isGridVisible;
+            if (isGridVisible) {
+                canvas.backgroundColor = gridPattern;
+            } else {
+                canvas.backgroundColor = '#f5f5f5';
+            }
+            canvas.requestRenderAll();
+        });
 
         // Init Fabric Canvas
         canvas = new fabric.Canvas('canvas', {
@@ -662,7 +702,8 @@ document.addEventListener("DOMContentLoaded", () => {
             const group = new fabric.Group([rect, text], {
                 left: 300,
                 top: 300,
-                id: id
+                id: id,
+                isStickyNote: true
             });
 
             canvas.add(group);
@@ -2242,7 +2283,7 @@ canvas.on('path:created', (e) => {
     const btnFlipX = document.getElementById("btn-flip-x");
     const btnFlipY = document.getElementById("btn-flip-y");
 
-    window.updatePropertiesPanel = function updatePropertiesPanel() {
+    function updatePropertiesPanel() {
         let activeObject = canvas.getActiveObject();
         if (!activeObject || activeObject.type === 'activeSelection') {
             propertiesPanel.style.display = 'none';
@@ -2251,10 +2292,23 @@ canvas.on('path:created', (e) => {
 
         // If it's a group, look for a text child to show text formatting tools
         let textObject = null;
+        let isStickyNote = false;
+        const propStickyColors = document.getElementById("prop-sticky-colors");
+
         if (activeObject.type === 'i-text' || activeObject.type === 'text' || activeObject.type === 'textbox') {
             textObject = activeObject;
         } else if (activeObject.type === 'group') {
             textObject = activeObject.getObjects().find(o => o.type === 'i-text' || o.type === 'text' || o.type === 'textbox');
+            const rect = activeObject.getObjects().find(o => o.type === 'rect');
+            if (activeObject.isStickyNote) {
+                isStickyNote = true;
+            } else if (textObject && rect && rect.rx === 5 && rect.ry === 5 && rect.shadow) { // simple heuristic for sticky
+                isStickyNote = true;
+            }
+        }
+
+        if (propStickyColors) {
+            propStickyColors.style.display = isStickyNote ? 'block' : 'none';
         }
 
         propertiesPanel.style.display = 'flex';
@@ -2521,6 +2575,27 @@ function handleSelection(opt) {
         if (btnAlignTextCenter) btnAlignTextCenter.addEventListener('click', () => applyTextAlign('center'));
         if (btnAlignTextRight) btnAlignTextRight.addEventListener('click', () => applyTextAlign('right'));
         if (btnAlignTextJustify) btnAlignTextJustify.addEventListener('click', () => applyTextAlign('justify'));
+
+        document.querySelectorAll('.sticky-color-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const color = e.target.getAttribute('data-color');
+                const activeObject = canvas.getActiveObject();
+                if (activeObject && activeObject.type === 'group') {
+                    const rect = activeObject.getObjects().find(o => o.type === 'rect');
+                    if (rect) {
+                        const originalState = activeObject.toObject(TO_OBJECT_PROPS);
+                        rect.set({ fill: color });
+                        console.log("SETTING COLOR TO", color);
+                        const newState = activeObject.toObject(TO_OBJECT_PROPS);
+                        pushHistory('modify', originalState, newState);
+
+                        canvas.requestRenderAll();
+                        canvas.fire('object:modified', { target: activeObject });
+                        updatePropertiesPanel();
+                    }
+                }
+            });
+        });
 
     function handleRemoteUpdate(action, objData, sender) {
         if (action === "disconnect") {
