@@ -26,7 +26,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let lastLaserSend = 0;
 
 
-    const TO_OBJECT_PROPS = ['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background', 'locked', 'lockMovementX', 'lockMovementY', 'lockRotation', 'lockScalingX', 'lockScalingY', 'hasControls', 'videoSrc', 'opacity', 'strokeDashArray', 'flipX', 'flipY', 'linethrough'];
+    const TO_OBJECT_PROPS = ['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background', 'locked', 'lockMovementX', 'lockMovementY', 'lockRotation', 'lockScalingX', 'lockScalingY', 'hasControls', 'videoSrc', 'opacity', 'strokeDashArray', 'flipX', 'flipY', 'linethrough', 'is_sticky'];
     window.TO_OBJECT_PROPS = TO_OBJECT_PROPS;
 
     let canvas;
@@ -462,6 +462,37 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         }
 
+        // Grid Background
+        const chkGridBg = document.getElementById("chk-grid-bg");
+        if (chkGridBg) {
+            chkGridBg.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    const offscreen = document.createElement('canvas');
+                    offscreen.width = GRID_SIZE;
+                    offscreen.height = GRID_SIZE;
+                    const ctx = offscreen.getContext('2d');
+                    ctx.strokeStyle = '#ccc';
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(0, 0);
+                    ctx.lineTo(GRID_SIZE, 0);
+                    ctx.moveTo(0, 0);
+                    ctx.lineTo(0, GRID_SIZE);
+                    ctx.stroke();
+
+                    const pattern = new fabric.Pattern({
+                        source: offscreen,
+                        repeat: 'repeat'
+                    });
+                    canvas.backgroundColor = pattern;
+                } else {
+                    const isDark = document.body.classList.contains("dark-mode");
+                    canvas.backgroundColor = isDark ? "#121212" : "#f5f5f5";
+                }
+                canvas.requestRenderAll();
+            });
+        }
+
         canvas.on('object:moving', function(options) {
             if (!gridSnapEnabled) return;
             const target = options.target;
@@ -662,7 +693,8 @@ document.addEventListener("DOMContentLoaded", () => {
             const group = new fabric.Group([rect, text], {
                 left: 300,
                 top: 300,
-                id: id
+                id: id,
+                is_sticky: true
             });
 
             canvas.add(group);
@@ -1933,7 +1965,14 @@ canvas.on('path:created', (e) => {
         document.getElementById("btn-dark-mode").addEventListener("click", (e) => {
             const isDark = document.body.classList.toggle("dark-mode");
             e.target.textContent = isDark ? "Light Mode" : "Dark Mode";
-            canvas.backgroundColor = isDark ? "#121212" : "#f5f5f5";
+            if (chkGridBg && chkGridBg.checked) {
+                // Keep the grid pattern, could potentially change line color if needed
+                // For simplicity, re-trigger the change event to redraw the pattern
+                const event = new Event('change');
+                chkGridBg.dispatchEvent(event);
+            } else {
+                canvas.backgroundColor = isDark ? "#121212" : "#f5f5f5";
+            }
             canvas.renderAll();
         });
 
@@ -2260,7 +2299,12 @@ canvas.on('path:created', (e) => {
         propertiesPanel.style.display = 'flex';
 
         // Populate current values
-        if (activeObject.fill) propFill.value = activeObject.fill;
+        if (activeObject.is_sticky && activeObject.type === 'group' && activeObject.getObjects().length > 0) {
+            const innerRect = activeObject.getObjects().find(o => o.type === 'rect');
+            if (innerRect && innerRect.fill) propFill.value = innerRect.fill;
+        } else if (activeObject.fill) {
+            propFill.value = activeObject.fill;
+        }
         if (activeObject.stroke) propStroke.value = activeObject.stroke;
         if (activeObject.strokeWidth !== undefined) propStrokeWidth.value = activeObject.strokeWidth;
         if (propStrokeStyle) propStrokeStyle.value = (activeObject.strokeDashArray && activeObject.strokeDashArray.length > 0) ? 'dashed' : 'solid';
@@ -2302,7 +2346,15 @@ canvas.on('path:created', (e) => {
 
             const originalState = activeObject.toObject(TO_OBJECT_PROPS);
 
-            if (prop === 'fill') activeObject.set('fill', val);
+            if (prop === 'fill') {
+                if (activeObject.is_sticky && activeObject.type === 'group') {
+                    const innerRect = activeObject.getObjects().find(o => o.type === 'rect');
+                    if (innerRect) {
+                        innerRect.set('fill', val);
+                    }
+                }
+                activeObject.set('fill', val);
+            }
             if (prop === 'stroke') activeObject.set('stroke', val);
             if (prop === 'stroke-width') activeObject.set('strokeWidth', val);
             if (prop === 'font-family') activeObject.set('fontFamily', val);
@@ -2361,7 +2413,13 @@ function handleSelection(opt) {
                 numVal = parseInt(value, 10);
             }
 
-            activeObj.set(propName, numVal);
+            if (activeObj.is_sticky && activeObj.type === 'group' && propName === 'fill') {
+                const innerRect = activeObj.getObjects().find(o => o.type === 'rect');
+                if (innerRect) {
+                    innerRect.set(propName, numVal);
+                }
+            }
+            activeObj.set(propName, numVal); // Also set on group for serialization if needed
             canvas.renderAll();
             canvas.fire('object:modified', { target: activeObj });
         }
