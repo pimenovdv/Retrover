@@ -31,6 +31,7 @@
         <button id="btn-rect">Add Rectangle</button>
         <button id="btn-circle">Add Circle</button>
         <button id="btn-text">Add Text</button>
+        <button id="btn-markdown">Insert Markdown</button>
         <button id="btn-sticky">Add Sticky</button>
         <button id="btn-cluster-stickies">Cluster Stickies</button>
         <button id="btn-line">Add Line</button>
@@ -97,6 +98,19 @@
     <div id="history-panel" style="display: none;">
         <h3>History</h3>
         <ul id="history-list"></ul>
+    </div>
+
+
+    <!-- Markdown Modal -->
+    <div id="markdown-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h2>Insert Markdown</h2>
+            <textarea id="markdown-input" rows="10" style="width: 100%; margin-bottom: 10px;" placeholder="Type markdown here..."></textarea>
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button id="btn-insert-markdown" style="padding: 10px; font-size: 16px;">Insert</button>
+                <button id="close-markdown-btn" style="padding: 10px; font-size: 16px;">Close</button>
+            </div>
+        </div>
     </div>
 
     <!-- Templates Modal -->

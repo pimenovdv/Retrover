@@ -50,6 +50,60 @@ document.addEventListener("DOMContentLoaded", () => {
     window.undoStack = undoStack;
     window.redoStack = redoStack;
 
+
+    function parseMarkdownToFabric(markdown) {
+        let plainText = "";
+        let styles = {};
+
+        let lines = markdown.split('\n');
+
+        for (let i = 0; i < lines.length; i++) {
+            let line = lines[i];
+            let plainLine = "";
+            let lineStyles = {};
+
+            let j = 0;
+            let isBold = false;
+            let isItalic = false;
+            let isStrike = false;
+
+            while (j < line.length) {
+                if (line.substr(j, 2) === '**') {
+                    isBold = !isBold;
+                    j += 2;
+                    continue;
+                }
+                if (line.substr(j, 1) === '*' && line.substr(j, 2) !== '**') {
+                    isItalic = !isItalic;
+                    j += 1;
+                    continue;
+                }
+                if (line.substr(j, 2) === '~~') {
+                    isStrike = !isStrike;
+                    j += 2;
+                    continue;
+                }
+                plainLine += line[j];
+                let charStyle = {};
+                if (isBold) charStyle.fontWeight = 'bold';
+                if (isItalic) charStyle.fontStyle = 'italic';
+                if (isStrike) charStyle.linethrough = true;
+
+                if (Object.keys(charStyle).length > 0) {
+                    lineStyles[plainLine.length - 1] = charStyle;
+                }
+                j++;
+            }
+
+            plainText += plainLine + (i < lines.length - 1 ? '\n' : '');
+            if (Object.keys(lineStyles).length > 0) {
+                styles[i] = lineStyles;
+            }
+        }
+
+        return { text: plainText, styles: styles };
+    }
+
     function pushHistory(actionType, prevData, newData) {
         if (isProcessingSync || isUndoRedo) return;
         undoStack.push({ type: actionType, prev: prevData, next: newData });
@@ -598,6 +652,52 @@ document.addEventListener("DOMContentLoaded", () => {
             updatePropertiesPanel();
         });
 
+
+
+        const markdownModal = document.getElementById("markdown-modal");
+        const btnMarkdown = document.getElementById("btn-markdown");
+        const btnInsertMarkdown = document.getElementById("btn-insert-markdown");
+        const closeMarkdownBtn = document.getElementById("close-markdown-btn");
+        const markdownInput = document.getElementById("markdown-input");
+
+        btnMarkdown.addEventListener("click", () => {
+            if (!canEdit) return;
+            markdownModal.style.display = "block";
+            markdownInput.value = ""; // clear previous
+            markdownInput.focus();
+        });
+
+        closeMarkdownBtn.addEventListener("click", () => {
+            markdownModal.style.display = "none";
+        });
+
+        btnInsertMarkdown.addEventListener("click", () => {
+            const markdownText = markdownInput.value;
+            if (!markdownText.trim()) {
+                markdownModal.style.display = "none";
+                return;
+            }
+
+            const parsed = parseMarkdownToFabric(markdownText);
+
+            const id = uuidv4();
+            const text = new fabric.Textbox(parsed.text, {
+                left: 300,
+                top: 300,
+                fontSize: 20,
+                fill: 'black',
+                width: 400,
+                splitByGrapheme: true,
+                id: id,
+                styles: parsed.styles
+            });
+
+            canvas.add(text);
+            canvas.setActiveObject(text);
+            updatePropertiesPanel();
+
+            markdownModal.style.display = "none";
+        });
 
         document.getElementById("btn-cluster-stickies").addEventListener("click", () => {
             if (!canEdit) return;
@@ -2417,9 +2517,11 @@ function handleSelection(opt) {
                 const innerRect = activeObj.getObjects().find(o => o.type === 'rect');
                 if (innerRect) {
                     innerRect.set(propName, numVal);
+                    activeObj.addWithUpdate(); // Updates the group internals
                 }
             }
             activeObj.set(propName, numVal); // Also set on group for serialization if needed
+
             canvas.renderAll();
             canvas.fire('object:modified', { target: activeObj });
         }
