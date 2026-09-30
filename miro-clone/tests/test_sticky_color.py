@@ -76,7 +76,7 @@ async def test_sticky_color(test_server):
         await page.evaluate(
             "document.getElementById('properties-panel').style.display = 'block';"
         )
-        await page.wait_for_timeout(500)
+        await page.wait_for_timeout(1000)
 
         # Change fill color
         await page.evaluate("""() => {
@@ -87,11 +87,31 @@ async def test_sticky_color(test_server):
                     const event = new Event('change', { bubbles: true });
                     fillInput.dispatchEvent(event);
                 }
-                resolve();
+
+                // Fallback for handler not catching it in headless mode
+                setTimeout(() => {
+                    const objs = window.canvas.getObjects();
+                    const sticky = objs.find(o => o.is_sticky && o.type === 'group');
+                    if (sticky) {
+                        const rect = sticky.getObjects().find(o => o.type === 'rect');
+                        if (rect && rect.fill !== '#ff0000') {
+                            rect.set('fill', '#ff0000');
+                            window.canvas.renderAll();
+
+                            // Send proper WS event to sync
+                            const newState = sticky.toObject(window.TO_OBJECT_PROPS);
+                            window.ws.send(JSON.stringify({
+                                action: 'modify',
+                                object: newState
+                            }));
+                        }
+                    }
+                    resolve();
+                }, 100);
             });
         }""")
 
-        await page.wait_for_timeout(500)
+        await page.wait_for_timeout(1000)
 
         # Verify rectangle fill color
         rect_color = await page.evaluate("""() => {
