@@ -26,7 +26,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let lastLaserSend = 0;
 
 
-    const TO_OBJECT_PROPS = ['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background', 'locked', 'lockMovementX', 'lockMovementY', 'lockRotation', 'lockScalingX', 'lockScalingY', 'hasControls', 'videoSrc', 'opacity', 'strokeDashArray', 'flipX', 'flipY', 'linethrough', 'is_sticky'];
+    const TO_OBJECT_PROPS = ['id', 'z_index', 'globalCompositeOperation', 'selectable', 'evented', 'is_background', 'locked', 'lockMovementX', 'lockMovementY', 'lockRotation', 'lockScalingX', 'lockScalingY', 'hasControls', 'videoSrc', 'opacity', 'strokeDashArray', 'flipX', 'flipY', 'linethrough', 'is_sticky', 'textBackgroundColor'];
     window.TO_OBJECT_PROPS = TO_OBJECT_PROPS;
 
     let canvas;
@@ -2371,6 +2371,8 @@ canvas.on('path:created', (e) => {
     const propStrokeStyle = document.getElementById("prop-stroke-style");
     const propFontFamily = document.getElementById("prop-font-family");
     const propFontSize = document.getElementById("prop-font-size");
+    const propTextBg = document.getElementById("prop-text-bg");
+    const propTextBgGroup = document.getElementById("prop-text-bg-group");
     const propAngle = document.getElementById("prop-angle");
     const propOpacity = document.getElementById("prop-opacity");
     const propTextFormats = document.getElementById("prop-text-formats");
@@ -2414,11 +2416,13 @@ canvas.on('path:created', (e) => {
         if (textObject) {
             propFontFamily.parentElement.style.display = 'flex';
             if (propFontSize) propFontSize.parentElement.style.display = 'flex';
+            if (propTextBgGroup) propTextBgGroup.style.display = 'flex';
             propTextFormats.style.display = 'block';
             const propTextAlign = document.getElementById("prop-text-align");
             if (propTextAlign) propTextAlign.style.display = 'block';
             if (textObject.fontFamily) propFontFamily.value = textObject.fontFamily;
             if (textObject.fontSize && propFontSize) propFontSize.value = textObject.fontSize;
+            if (propTextBg) propTextBg.value = textObject.textBackgroundColor || '#ffffff';
 
             btnBold.style.backgroundColor = textObject.fontWeight === 'bold' ? '#ccc' : '';
             btnItalic.style.backgroundColor = textObject.fontStyle === 'italic' ? '#ccc' : '';
@@ -2427,6 +2431,7 @@ canvas.on('path:created', (e) => {
         } else {
             propFontFamily.parentElement.style.display = 'none';
             if (propFontSize) propFontSize.parentElement.style.display = 'none';
+            if (propTextBgGroup) propTextBgGroup.style.display = 'none';
             propTextFormats.style.display = 'none';
             const propTextAlign = document.getElementById("prop-text-align");
             if (propTextAlign) propTextAlign.style.display = 'none';
@@ -2540,6 +2545,11 @@ function handleSelection(opt) {
         if (typeof propFontSize !== 'undefined' && propFontSize) {
             propFontSize.addEventListener('input', (e) => applyPropertyChange('fontSize', parseInt(e.target.value, 10)));
             propFontSize.addEventListener('change', (e) => applyPropertyChange('fontSize', parseInt(e.target.value, 10)));
+        }
+
+        if (typeof propTextBg !== 'undefined' && propTextBg) {
+            propTextBg.addEventListener('input', (e) => applyPropertyChange('textBackgroundColor', e.target.value));
+            propTextBg.addEventListener('change', (e) => applyPropertyChange('textBackgroundColor', e.target.value));
         }
 
         propAngle.addEventListener('input', (e) => applyPropertyChange('angle', parseFloat(e.target.value)));
