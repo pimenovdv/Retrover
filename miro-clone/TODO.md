@@ -1,11 +1,9 @@
 # TODO for Miro Clone
 
 ## Completed Features
-- Core collaboration, UI/UX, History, Import/Export, Tools, Templates, Shortcuts (including Zoom), Formatting, Select All UI button, Delete UI Button, Minimap Toggle Button, Embed Iframes, Lasso Tool.
-- Added Sticky Note Colors and grid background toggle.
-- Added Markdown text insertion capability to canvas.
+- Core collaboration, UI/UX, History, Import/Export, Tools, Templates, Shortcuts, Formatting, Select All, Delete, Minimap, Iframes, Lasso, Sticky Colors, Grid background, Markdown text, Custom font size.
 
 ## To-Do
 
 ### Newly Planned Features
-- [ ] Add custom font sizes input (beyond just up/down buttons) to the properties panel.
+- [x] Add Text Background Color highlight property.
