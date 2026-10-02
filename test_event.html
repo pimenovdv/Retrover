@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<body>
+    <input type="color" id="prop-stroke" value="#000000" />
+    <script>
+        const el = document.getElementById('prop-stroke');
+        el.addEventListener('change', () => {
+            console.log('CHANGE event fired!');
+        });
+        el.addEventListener('input', () => {
+            console.log('INPUT event fired!');
+        });
+    </script>
+</body>
+</html>
