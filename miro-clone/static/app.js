@@ -885,8 +885,17 @@ document.addEventListener("DOMContentLoaded", () => {
              btnEraser.style.backgroundColor = '#f0f0f0';
              btnLaser.style.backgroundColor = '#f0f0f0';
              btnLasso.style.backgroundColor = '#f0f0f0';
-             canvas.freeDrawingBrush.color = '#000000'; // Reset drawing color
-             canvas.freeDrawingBrush.width = 2;
+
+             if (canvas.isDrawingMode) {
+                 const propStroke = document.getElementById("prop-stroke");
+                 const propStrokeWidth = document.getElementById("prop-stroke-width");
+                 canvas.freeDrawingBrush.color = propStroke ? propStroke.value : '#000000';
+                 canvas.freeDrawingBrush.width = propStrokeWidth ? parseInt(propStrokeWidth.value, 10) : 2;
+             } else {
+                 canvas.freeDrawingBrush.color = '#000000';
+                 canvas.freeDrawingBrush.width = 2;
+             }
+             updatePropertiesPanel();
         });
 
         btnEraser.addEventListener("click", () => {
@@ -2386,8 +2395,26 @@ canvas.on('path:created', (e) => {
     function updatePropertiesPanel() {
         let activeObject = canvas.getActiveObject();
         if (!activeObject || activeObject.type === 'activeSelection') {
-            propertiesPanel.style.display = 'none';
-            return;
+            if (canvas.isDrawingMode && !isEraserMode && !isLassoMode) {
+                propertiesPanel.style.display = 'flex';
+
+                // Position panel in a fixed place for freehand mode (since no object is selected)
+                propertiesPanel.style.position = 'fixed';
+                propertiesPanel.style.left = '20px';
+                propertiesPanel.style.top = '100px';
+
+                propStroke.value = canvas.freeDrawingBrush.color || '#000000';
+                propStrokeWidth.value = canvas.freeDrawingBrush.width || 2;
+
+                return;
+            } else {
+                propertiesPanel.style.display = 'none';
+                return;
+            }
+        } else {
+            propertiesPanel.style.display = 'flex';
+            // Reset fixed positioning in case we came from freehand mode
+            propertiesPanel.style.position = 'absolute';
         }
 
         // If it's a group, look for a text child to show text formatting tools
@@ -2441,13 +2468,21 @@ canvas.on('path:created', (e) => {
 
     [propFill, propStroke, propStrokeWidth, propFontFamily].forEach(input => {
         input.addEventListener('change', (e) => {
-            const activeObject = canvas.getActiveObject();
-            if (!activeObject) return;
-
             const prop = e.target.id.replace('prop-', '');
             let val = e.target.value;
 
             if (prop === 'stroke-width') val = parseInt(val, 10);
+
+            if (canvas.isDrawingMode && !isEraserMode && !isLassoMode) {
+                if (prop === 'stroke') {
+                    canvas.freeDrawingBrush.color = val;
+                } else if (prop === 'stroke-width') {
+                    canvas.freeDrawingBrush.width = val;
+                }
+            }
+
+            const activeObject = canvas.getActiveObject();
+            if (!activeObject) return;
 
             const originalState = activeObject.toObject(TO_OBJECT_PROPS);
 
@@ -2534,11 +2569,32 @@ function handleSelection(opt) {
         propFill.addEventListener('input', (e) => applyPropertyChange('fill', e.target.value));
         propFill.addEventListener('change', (e) => applyPropertyChange('fill', e.target.value));
 
-        propStroke.addEventListener('input', (e) => applyPropertyChange('stroke', e.target.value));
-        propStroke.addEventListener('change', (e) => applyPropertyChange('stroke', e.target.value));
+        // Explicitly update brush first before attempting to apply changes to selection
+        propStroke.addEventListener('input', (e) => {
+             if (canvas.isDrawingMode && !isEraserMode && !isLassoMode) {
+                 canvas.freeDrawingBrush.color = e.target.value;
+             }
+             applyPropertyChange('stroke', e.target.value);
+        });
+        propStroke.addEventListener('change', (e) => {
+             if (canvas.isDrawingMode && !isEraserMode && !isLassoMode) {
+                 canvas.freeDrawingBrush.color = e.target.value;
+             }
+             applyPropertyChange('stroke', e.target.value);
+        });
 
-        propStrokeWidth.addEventListener('input', (e) => applyPropertyChange('strokeWidth', e.target.value));
-        propStrokeWidth.addEventListener('change', (e) => applyPropertyChange('strokeWidth', e.target.value));
+        propStrokeWidth.addEventListener('input', (e) => {
+             if (canvas.isDrawingMode && !isEraserMode && !isLassoMode) {
+                 canvas.freeDrawingBrush.width = parseInt(e.target.value, 10);
+             }
+             applyPropertyChange('strokeWidth', parseInt(e.target.value, 10));
+        });
+        propStrokeWidth.addEventListener('change', (e) => {
+             if (canvas.isDrawingMode && !isEraserMode && !isLassoMode) {
+                 canvas.freeDrawingBrush.width = parseInt(e.target.value, 10);
+             }
+             applyPropertyChange('strokeWidth', parseInt(e.target.value, 10));
+        });
 
         propFontFamily.addEventListener('change', (e) => applyPropertyChange('fontFamily', e.target.value));
 
