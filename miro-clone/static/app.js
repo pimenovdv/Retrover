@@ -636,6 +636,21 @@ document.addEventListener("DOMContentLoaded", () => {
             updatePropertiesPanel();
         });
 
+        document.getElementById("btn-triangle").addEventListener("click", () => {
+            const id = uuidv4();
+            const triangle = new fabric.Triangle({
+                left: 250,
+                top: 250,
+                width: 100,
+                height: 100,
+                fill: 'blue',
+                id: id
+            });
+            canvas.add(triangle);
+            canvas.setActiveObject(triangle);
+            updatePropertiesPanel();
+        });
+
         document.getElementById("btn-text").addEventListener("click", () => {
             const id = uuidv4();
             const text = new fabric.Textbox('Hello World', {
