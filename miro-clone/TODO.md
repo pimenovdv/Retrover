@@ -7,4 +7,4 @@
 
 ### Newly Planned Features
 - [x] Add Triangle Shape
-- [ ] Bring Forward / Send Backward buttons
+- [x] Bring Forward / Send Backward buttons
