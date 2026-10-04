@@ -1436,6 +1436,22 @@ canvas.on('path:created', (e) => {
              }
         });
 
+        document.getElementById("btn-bring-forward").addEventListener("click", () => {
+             const activeObject = canvas.getActiveObject();
+             if (activeObject) {
+                 canvas.bringForward(activeObject);
+                 updateZIndices();
+             }
+        });
+
+        document.getElementById("btn-send-backward").addEventListener("click", () => {
+             const activeObject = canvas.getActiveObject();
+             if (activeObject) {
+                 canvas.sendBackwards(activeObject);
+                 updateZIndices();
+             }
+        });
+
         document.getElementById("btn-back").addEventListener("click", () => {
              const activeObject = canvas.getActiveObject();
              if (activeObject) {
