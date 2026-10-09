@@ -673,6 +673,34 @@ document.addEventListener("DOMContentLoaded", () => {
             updatePropertiesPanel();
         });
 
+        document.getElementById("btn-star").addEventListener("click", () => {
+            const id = uuidv4();
+            const vpt = canvas.viewportTransform;
+            const x = (canvas.width / 2 - vpt[4]) / vpt[0];
+            const y = (canvas.height / 2 - vpt[5]) / vpt[3];
+
+            const star = new fabric.Polygon([
+                {x: 50, y: 0},
+                {x: 61, y: 35},
+                {x: 98, y: 35},
+                {x: 68, y: 57},
+                {x: 79, y: 91},
+                {x: 50, y: 70},
+                {x: 21, y: 91},
+                {x: 32, y: 57},
+                {x: 2, y: 35},
+                {x: 39, y: 35}
+            ], {
+                left: x,
+                top: y,
+                fill: 'yellow',
+                id: id
+            });
+            canvas.add(star);
+            canvas.setActiveObject(star);
+            updatePropertiesPanel();
+        });
+
         document.getElementById("btn-text").addEventListener("click", () => {
             const id = uuidv4();
             const text = new fabric.Textbox('Hello World', {
