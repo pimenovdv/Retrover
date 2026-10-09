@@ -651,6 +651,28 @@ document.addEventListener("DOMContentLoaded", () => {
             updatePropertiesPanel();
         });
 
+        document.getElementById("btn-diamond").addEventListener("click", () => {
+            const id = uuidv4();
+            const vpt = canvas.viewportTransform;
+            const x = (canvas.width / 2 - vpt[4]) / vpt[0];
+            const y = (canvas.height / 2 - vpt[5]) / vpt[3];
+
+            const diamond = new fabric.Polygon([
+                {x: 50, y: 0},
+                {x: 100, y: 50},
+                {x: 50, y: 100},
+                {x: 0, y: 50}
+            ], {
+                left: x,
+                top: y,
+                fill: 'orange',
+                id: id
+            });
+            canvas.add(diamond);
+            canvas.setActiveObject(diamond);
+            updatePropertiesPanel();
+        });
+
         document.getElementById("btn-text").addEventListener("click", () => {
             const id = uuidv4();
             const text = new fabric.Textbox('Hello World', {
