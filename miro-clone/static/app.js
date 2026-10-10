@@ -701,6 +701,30 @@ document.addEventListener("DOMContentLoaded", () => {
             updatePropertiesPanel();
         });
 
+        document.getElementById("btn-hexagon").addEventListener("click", () => {
+            const id = uuidv4();
+            const vpt = canvas.viewportTransform;
+            const x = (canvas.width / 2 - vpt[4]) / vpt[0];
+            const y = (canvas.height / 2 - vpt[5]) / vpt[3];
+
+            const hexagon = new fabric.Polygon([
+                {x: 50, y: 0},
+                {x: 100, y: 25},
+                {x: 100, y: 75},
+                {x: 50, y: 100},
+                {x: 0, y: 75},
+                {x: 0, y: 25}
+            ], {
+                left: x,
+                top: y,
+                fill: 'purple',
+                id: id
+            });
+            canvas.add(hexagon);
+            canvas.setActiveObject(hexagon);
+            updatePropertiesPanel();
+        });
+
         document.getElementById("btn-text").addEventListener("click", () => {
             const id = uuidv4();
             const text = new fabric.Textbox('Hello World', {
