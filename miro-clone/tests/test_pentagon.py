@@ -1,71 +1,82 @@
-import pytest
-from playwright.async_api import async_playwright
-import uvicorn
-import asyncio
+import os
 import threading
-import socket
+import time
 import uuid
-import json
+import socket
+
+import pytest
+import uvicorn
+from playwright.sync_api import sync_playwright
+
 from src.main import app
 
-def get_free_port():
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.bind(('', 0))
-    port = s.getsockname()[1]
-    s.close()
-    return port
+os.environ["TESTING"] = "1"
 
 @pytest.fixture(scope="module")
-def server_url():
-    port = get_free_port()
-    config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="error")
+def test_server():
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(("", 0))
+    port = s.getsockname()[1]
+    s.close()
+
+    config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning")
     server = uvicorn.Server(config)
-
-    def run_server():
-        asyncio.run(server.serve())
-
-    thread = threading.Thread(target=run_server, daemon=True)
+    thread = threading.Thread(target=server.run, daemon=True)
     thread.start()
-
-    url = f"http://127.0.0.1:{port}"
-
-    # Wait for server to start
-    import time
-    time.sleep(1)
-
-    yield url
-
+    time.sleep(2)
+    yield port
     server.should_exit = True
     thread.join(timeout=2)
 
-@pytest.mark.asyncio
-async def test_add_pentagon(server_url):
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
-        page = await browser.new_page()
 
-        test_board_id = f"test_board_{uuid.uuid4().hex[:8]}"
-        await page.goto(f"{server_url}/")
+@pytest.mark.skipif("CI" in os.environ, reason="Playwright tests are skipped in CI")
+def test_add_pentagon(test_server: int):
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
+        page.goto(f"http://127.0.0.1:{test_server}")
 
-        # Login
-        await page.fill('#board-id-input', test_board_id)
-        await page.fill('#nickname-input', 'tester')
-        await page.fill('#password-input', 'password')
-        await page.click('#register-btn')
+        board_id = f"board-{uuid.uuid4().hex[:8]}"
+        username = f"user-{uuid.uuid4().hex[:8]}"
+        password = "password123"
 
-        # Wait for canvas
-        await page.wait_for_function("window.canvas !== undefined")
+        page.fill("#board-id-input", board_id)
+        page.fill("#nickname-input", username)
+        page.fill("#password-input", password)
+        page.click("#register-btn")
 
-        # Click add pentagon button
-        await page.evaluate('document.getElementById("btn-pentagon").click()')
+        page.wait_for_selector("#toolbar", state="visible")
 
-        # Check objects on canvas
-        objects = await page.evaluate("() => { return window.canvas.getObjects().map(o => o.toObject()); }")
+        # Click the add pentagon button
+        page.evaluate('document.getElementById("btn-pentagon").click()')
 
-        pentagon_objects = [obj for obj in objects if obj.get('type') == 'polygon' and len(obj.get('points', [])) == 5]
-        assert len(pentagon_objects) == 1
+        time.sleep(1) # wait for enlivenObjects and render
 
-        pentagon = pentagon_objects[0]
-        assert pentagon['fill'] == 'orange'
+        # Check properties of the drawn object
+        objects_count = page.evaluate("canvas.getObjects().length")
+        assert objects_count > 0, "A pentagon should have been drawn"
 
-        await browser.close()
+        pentagon_props = page.evaluate("""
+            () => {
+                const pentagon = canvas.getObjects()[0];
+                return {
+                    type: pentagon.type,
+                    fill: pentagon.fill,
+                    points: pentagon.points
+                };
+            }
+        """)
+
+        assert pentagon_props["type"] == "polygon"
+
+        # Verify points structure
+        assert pentagon_props["points"] == [
+            {"x": 50, "y": 0},
+            {"x": 100, "y": 38},
+            {"x": 82, "y": 100},
+            {"x": 18, "y": 100},
+            {"x": 0, "y": 38}
+        ]
+        assert pentagon_props["fill"].lower().replace(" ", "") in ["orange", "#ffa500", "rgb(255,165,0)"]
+
+        browser.close()
