@@ -957,6 +957,31 @@ document.addEventListener("DOMContentLoaded", () => {
             canvas.setActiveObject(pentagon);
         });
 
+        document.getElementById("btn-octagon").addEventListener("click", () => {
+            const id = uuidv4();
+            const vpt = canvas.viewportTransform;
+            const x = (canvas.width / 2 - vpt[4]) / vpt[0];
+            const y = (canvas.height / 2 - vpt[5]) / vpt[3];
+
+            const octagon = new fabric.Polygon([
+                {x: 30, y: 0},
+                {x: 70, y: 0},
+                {x: 100, y: 30},
+                {x: 100, y: 70},
+                {x: 70, y: 100},
+                {x: 30, y: 100},
+                {x: 0, y: 70},
+                {x: 0, y: 30}
+            ], {
+                left: x,
+                top: y,
+                fill: 'teal',
+                id: id
+            });
+            canvas.add(octagon);
+            canvas.setActiveObject(octagon);
+        });
+
         document.getElementById("btn-polygon").addEventListener("click", () => {
              const id = uuidv4();
              const vpt = canvas.viewportTransform;
