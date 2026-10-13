@@ -1,9 +1,9 @@
 # TODO for Miro Clone
 
 ## Completed Features
-- Core collaboration, UI/UX, History, Import/Export, Tools, Templates, Shortcuts, Formatting, Minimap, Iframes, Lasso, Sticky Colors, Grid background, Markdown, Custom shapes (Triangle, Diamond, Star, Hexagon, Pentagon), Layers.
+- Core features, UI/UX, History, I/O, Tools, Templates, Minimap, Iframes, Lasso, Markdown, Custom shapes, Layers, Octagon Shape.
 
 ## To-Do
 
 ### Newly Planned Features
-- [x] Add Octagon Shape
+- [x] Add Ellipse Shape
