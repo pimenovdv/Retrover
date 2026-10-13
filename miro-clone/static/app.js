@@ -982,6 +982,24 @@ document.addEventListener("DOMContentLoaded", () => {
             canvas.setActiveObject(octagon);
         });
 
+        document.getElementById("btn-ellipse").addEventListener("click", () => {
+            const id = uuidv4();
+            const vpt = canvas.viewportTransform;
+            const x = (canvas.width / 2 - vpt[4]) / vpt[0];
+            const y = (canvas.height / 2 - vpt[5]) / vpt[3];
+
+            const ellipse = new fabric.Ellipse({
+                rx: 50,
+                ry: 30,
+                fill: 'pink',
+                left: x,
+                top: y,
+                id: id
+            });
+            canvas.add(ellipse);
+            canvas.setActiveObject(ellipse);
+        });
+
         document.getElementById("btn-polygon").addEventListener("click", () => {
              const id = uuidv4();
              const vpt = canvas.viewportTransform;
