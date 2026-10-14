@@ -12,6 +12,7 @@ from src.main import app
 
 os.environ["TESTING"] = "1"
 
+
 @pytest.fixture(scope="module")
 def test_server():
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -50,7 +51,7 @@ def test_add_octagon(test_server: int):
         # Click the add octagon button
         page.evaluate('document.getElementById("btn-octagon").click()')
 
-        time.sleep(1) # wait for enlivenObjects and render
+        time.sleep(1)  # wait for enlivenObjects and render
 
         # Check properties of the drawn object
         objects_count = page.evaluate("canvas.getObjects().length")
@@ -78,8 +79,12 @@ def test_add_octagon(test_server: int):
             {"x": 70, "y": 100},
             {"x": 30, "y": 100},
             {"x": 0, "y": 70},
-            {"x": 0, "y": 30}
+            {"x": 0, "y": 30},
         ]
-        assert octagon_props["fill"].lower().replace(" ", "") in ["teal", "#008080", "rgb(0,128,128)"]
+        assert octagon_props["fill"].lower().replace(" ", "") in [
+            "teal",
+            "#008080",
+            "rgb(0,128,128)",
+        ]
 
         browser.close()

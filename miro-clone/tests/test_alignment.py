@@ -109,8 +109,8 @@ def test_alignment(test_server):
         # Center alignment aligns them such that they have the same center relative to the group
         # Wait, if we aligned them center in ActiveSelection, their absolute lefts will be the same if they have the same width.
         # But we made sure they are both rects with default width (100). So their lefts should be equal.
-        assert (
-            result[0] == result[1]
-        ), f"Objects were not center aligned. Lefts: {result}"
+        assert result[0] == result[1], (
+            f"Objects were not center aligned. Lefts: {result}"
+        )
 
         browser.close()

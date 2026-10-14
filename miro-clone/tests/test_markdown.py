@@ -10,8 +10,10 @@ from playwright.async_api import async_playwright
 
 from src.main import app
 
+
 def run_server(server):
     server.run()
+
 
 @pytest.fixture(scope="module")
 def test_server():
@@ -31,6 +33,7 @@ def test_server():
 
     server.should_exit = True
     thread.join()
+
 
 @pytest.mark.asyncio
 @pytest.mark.skipif(os.environ.get("CI") == "true", reason="Skipping UI tests in CI")
@@ -62,7 +65,7 @@ async def test_insert_markdown(test_server):
         await page.fill("#markdown-input", markdown_text)
 
         # Click insert
-        await page.click('#btn-insert-markdown')
+        await page.click("#btn-insert-markdown")
 
         # Wait for the modal to close and the active object to be set
         await page.wait_for_timeout(500)
@@ -78,7 +81,9 @@ async def test_insert_markdown(test_server):
             };
         }""")
 
-        assert active_object_data is not None, "No active object found after inserting markdown"
+        assert active_object_data is not None, (
+            "No active object found after inserting markdown"
+        )
         assert active_object_data["type"] == "textbox"
         assert active_object_data["text"] == "Hello world\nItalics and strike"
 
@@ -89,17 +94,23 @@ async def test_insert_markdown(test_server):
         # "world" starts at index 6 and ends at 10.
         for i in range(6, 11):
             char_style = styles.get("0", {}).get(str(i), {})
-            assert char_style.get("fontWeight") == "bold", f"Char at line 0, index {i} should be bold"
+            assert char_style.get("fontWeight") == "bold", (
+                f"Char at line 0, index {i} should be bold"
+            )
 
         # Line 1: "Italics and strike"
         # "Italics" starts at index 0 and ends at 6.
         for i in range(0, 7):
             char_style = styles.get("1", {}).get(str(i), {})
-            assert char_style.get("fontStyle") == "italic", f"Char at line 1, index {i} should be italic"
+            assert char_style.get("fontStyle") == "italic", (
+                f"Char at line 1, index {i} should be italic"
+            )
 
         # "strike" starts at index 12 and ends at 17.
         for i in range(12, 18):
             char_style = styles.get("1", {}).get(str(i), {})
-            assert char_style.get("linethrough") is True, f"Char at line 1, index {i} should be strikethrough"
+            assert char_style.get("linethrough") is True, (
+                f"Char at line 1, index {i} should be strikethrough"
+            )
 
         await browser.close()

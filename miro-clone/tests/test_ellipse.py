@@ -12,6 +12,7 @@ from src.main import app
 
 os.environ["TESTING"] = "1"
 
+
 @pytest.fixture(scope="module")
 def test_server():
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -50,7 +51,7 @@ def test_add_ellipse(test_server: int):
         # Click the add ellipse button
         page.evaluate('document.getElementById("btn-ellipse").click()')
 
-        time.sleep(1) # wait for enlivenObjects and render
+        time.sleep(1)  # wait for enlivenObjects and render
 
         # Check properties of the drawn object
         objects_count = page.evaluate("canvas.getObjects().length")
@@ -71,6 +72,10 @@ def test_add_ellipse(test_server: int):
         assert ellipse_props["type"] == "ellipse"
         assert ellipse_props["rx"] == 50
         assert ellipse_props["ry"] == 30
-        assert ellipse_props["fill"].lower().replace(" ", "") in ["pink", "#ffc0cb", "rgb(255,192,203)"]
+        assert ellipse_props["fill"].lower().replace(" ", "") in [
+            "pink",
+            "#ffc0cb",
+            "rgb(255,192,203)",
+        ]
 
         browser.close()

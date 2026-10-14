@@ -84,10 +84,9 @@ async def test_text_bg_control(test_server):
         is_panel_visible = await page.evaluate(
             "document.getElementById('properties-panel').style.display !== 'none'"
         )
-        assert (
-            is_panel_visible
-        ), "Properties panel should be visible when an object is selected"
-
+        assert is_panel_visible, (
+            "Properties panel should be visible when an object is selected"
+        )
 
         # Wait a little bit for rendering if needed
         await page.wait_for_timeout(200)
@@ -97,9 +96,9 @@ async def test_text_bg_control(test_server):
             const obj = window.canvas.getActiveObject();
             return obj ? obj.textBackgroundColor : null;
         }""")
-        assert (
-            initial_bg_color == '#ffffff'
-        ), f"Initial text bg color should be #ffffff, got {initial_bg_color}"
+        assert initial_bg_color == "#ffffff", (
+            f"Initial text bg color should be #ffffff, got {initial_bg_color}"
+        )
 
         # Trigger DOM event and let applyPropertyChange local method handle it
         await page.evaluate("""() => {
@@ -133,6 +132,8 @@ async def test_text_bg_control(test_server):
             const obj = window.canvas.getActiveObject();
             return obj ? obj.textBackgroundColor : null;
         }""")
-        assert new_bg_color == '#ff0000', f"Expected text bg color to be #ff0000, got {new_bg_color}"
+        assert new_bg_color == "#ff0000", (
+            f"Expected text bg color to be #ff0000, got {new_bg_color}"
+        )
 
         await browser.close()

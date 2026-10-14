@@ -12,6 +12,7 @@ from src.main import app
 
 os.environ["TESTING"] = "1"
 
+
 @pytest.fixture(scope="module")
 def test_server():
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

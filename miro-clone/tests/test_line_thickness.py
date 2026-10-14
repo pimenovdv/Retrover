@@ -83,18 +83,18 @@ async def test_line_thickness_control(test_server):
         is_panel_visible = await page.evaluate(
             "document.getElementById('properties-panel').style.display !== 'none'"
         )
-        assert (
-            is_panel_visible
-        ), "Properties panel should be visible when an object is selected"
+        assert is_panel_visible, (
+            "Properties panel should be visible when an object is selected"
+        )
 
         # Check initial stroke width
         initial_stroke_width = await page.evaluate("""() => {
             const obj = window.canvas.getActiveObject();
             return obj ? obj.strokeWidth : null;
         }""")
-        assert (
-            initial_stroke_width == 5
-        ), f"Initial stroke width should be 5, got {initial_stroke_width}"
+        assert initial_stroke_width == 5, (
+            f"Initial stroke width should be 5, got {initial_stroke_width}"
+        )
 
         # Trigger DOM event and let applyPropertyChange local method handle it
         await page.evaluate("""() => {
@@ -128,8 +128,8 @@ async def test_line_thickness_control(test_server):
             const obj = window.canvas.getActiveObject();
             return obj ? obj.strokeWidth : null;
         }""")
-        assert (
-            new_stroke_width == 15
-        ), f"Expected stroke width to be 15, got {new_stroke_width}"
+        assert new_stroke_width == 15, (
+            f"Expected stroke width to be 15, got {new_stroke_width}"
+        )
 
         await browser.close()

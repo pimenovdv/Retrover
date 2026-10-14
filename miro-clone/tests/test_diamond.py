@@ -12,6 +12,7 @@ from src.main import app
 
 os.environ["TESTING"] = "1"
 
+
 @pytest.fixture(scope="module")
 def test_server():
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -50,7 +51,7 @@ def test_add_diamond(test_server: int):
         # Click the add diamond button
         page.evaluate('document.getElementById("btn-diamond").click()')
 
-        time.sleep(1) # wait for enlivenObjects and render
+        time.sleep(1)  # wait for enlivenObjects and render
 
         # Check properties of the drawn path
         objects_count = page.evaluate("canvas.getObjects().length")
@@ -74,8 +75,12 @@ def test_add_diamond(test_server: int):
             {"x": 50, "y": 0},
             {"x": 100, "y": 50},
             {"x": 50, "y": 100},
-            {"x": 0, "y": 50}
+            {"x": 0, "y": 50},
         ]
-        assert diamond_props["fill"].lower().replace(" ", "") in ["orange", "#ffa500", "rgb(255,165,0)"]
+        assert diamond_props["fill"].lower().replace(" ", "") in [
+            "orange",
+            "#ffa500",
+            "rgb(255,165,0)",
+        ]
 
         browser.close()

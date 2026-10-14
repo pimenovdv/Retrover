@@ -12,6 +12,7 @@ from src.main import app
 
 os.environ["TESTING"] = "1"
 
+
 @pytest.fixture(scope="module")
 def test_server():
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -100,13 +101,19 @@ def test_freehand_brush_properties(test_server: int):
 
         # Fabric.js sometimes outputs RGB. Let's normalize.
         if path_props["stroke"]:
-            stroke = path_props["stroke"].lower().replace(' ', '')
-            assert stroke in ["#ff0000", "rgb(255,0,0)"], f"Expected #ff0000 or rgb(255,0,0), got {path_props['stroke']}"
-            assert path_props["strokeWidth"] == 10, f"Expected 10, got {path_props['strokeWidth']}"
+            stroke = path_props["stroke"].lower().replace(" ", "")
+            assert stroke in ["#ff0000", "rgb(255,0,0)"], (
+                f"Expected #ff0000 or rgb(255,0,0), got {path_props['stroke']}"
+            )
+            assert path_props["strokeWidth"] == 10, (
+                f"Expected 10, got {path_props['strokeWidth']}"
+            )
         else:
             # Maybe the path isn't fully initialized in the headless environment, check the brush directly
-            brush_color = path_props["color"].lower().replace(' ', '')
-            assert brush_color in ["#ff0000", "rgb(255,0,0)"], f"Expected #ff0000 or rgb(255,0,0), got {path_props['color']}"
+            brush_color = path_props["color"].lower().replace(" ", "")
+            assert brush_color in ["#ff0000", "rgb(255,0,0)"], (
+                f"Expected #ff0000 or rgb(255,0,0), got {path_props['color']}"
+            )
             assert path_props["width"] == 10, f"Expected 10, got {path_props['width']}"
 
         browser.close()
