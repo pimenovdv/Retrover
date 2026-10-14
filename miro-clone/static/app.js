@@ -1000,6 +1000,28 @@ document.addEventListener("DOMContentLoaded", () => {
             canvas.setActiveObject(ellipse);
         });
 
+        document.getElementById("btn-parallelogram").addEventListener("click", () => {
+            const id = uuidv4();
+            const vpt = canvas.viewportTransform;
+            const x = (canvas.width / 2 - vpt[4]) / vpt[0];
+            const y = (canvas.height / 2 - vpt[5]) / vpt[3];
+
+            const parallelogram = new fabric.Polygon([
+                {x: 25, y: 0},
+                {x: 125, y: 0},
+                {x: 100, y: 75},
+                {x: 0, y: 75}
+            ], {
+                left: x,
+                top: y,
+                fill: 'lightblue',
+                id: id
+            });
+            canvas.add(parallelogram);
+            canvas.setActiveObject(parallelogram);
+            updatePropertiesPanel();
+        });
+
         document.getElementById("btn-polygon").addEventListener("click", () => {
              const id = uuidv4();
              const vpt = canvas.viewportTransform;
