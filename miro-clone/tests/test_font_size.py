@@ -83,18 +83,18 @@ async def test_font_size_control(test_server):
         is_panel_visible = await page.evaluate(
             "document.getElementById('properties-panel').style.display !== 'none'"
         )
-        assert (
-            is_panel_visible
-        ), "Properties panel should be visible when an object is selected"
+        assert is_panel_visible, (
+            "Properties panel should be visible when an object is selected"
+        )
 
         # Check initial font size
         initial_font_size = await page.evaluate("""() => {
             const obj = window.canvas.getActiveObject();
             return obj ? obj.fontSize : null;
         }""")
-        assert (
-            initial_font_size == 20
-        ), f"Initial font size should be 20, got {initial_font_size}"
+        assert initial_font_size == 20, (
+            f"Initial font size should be 20, got {initial_font_size}"
+        )
 
         # Trigger DOM event and let applyPropertyChange local method handle it
         await page.evaluate("""() => {

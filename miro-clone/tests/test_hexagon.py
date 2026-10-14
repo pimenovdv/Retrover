@@ -12,6 +12,7 @@ from src.main import app
 
 os.environ["TESTING"] = "1"
 
+
 @pytest.fixture(scope="module")
 def test_server():
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -50,7 +51,7 @@ def test_add_hexagon(test_server: int):
         # Click the add hexagon button
         page.evaluate('document.getElementById("btn-hexagon").click()')
 
-        time.sleep(1) # wait for enlivenObjects and render
+        time.sleep(1)  # wait for enlivenObjects and render
 
         # Check properties of the drawn object
         objects_count = page.evaluate("canvas.getObjects().length")
@@ -76,8 +77,12 @@ def test_add_hexagon(test_server: int):
             {"x": 100, "y": 75},
             {"x": 50, "y": 100},
             {"x": 0, "y": 75},
-            {"x": 0, "y": 25}
+            {"x": 0, "y": 25},
         ]
-        assert hexagon_props["fill"].lower().replace(" ", "") in ["purple", "#800080", "rgb(128,0,128)"]
+        assert hexagon_props["fill"].lower().replace(" ", "") in [
+            "purple",
+            "#800080",
+            "rgb(128,0,128)",
+        ]
 
         browser.close()

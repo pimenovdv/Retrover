@@ -90,18 +90,18 @@ async def test_opacity_control(test_server):
         is_panel_visible = await page.evaluate(
             "document.getElementById('properties-panel').style.display !== 'none'"
         )
-        assert (
-            is_panel_visible
-        ), "Properties panel should be visible when an object is selected"
+        assert is_panel_visible, (
+            "Properties panel should be visible when an object is selected"
+        )
 
         # Check initial opacity
         initial_opacity = await page.evaluate("""() => {
             const obj = window.canvas.getActiveObject();
             return obj ? obj.opacity : null;
         }""")
-        assert (
-            initial_opacity == 1.0 or initial_opacity is None
-        ), f"Initial opacity should be 1.0 or undefined, got {initial_opacity}"
+        assert initial_opacity == 1.0 or initial_opacity is None, (
+            f"Initial opacity should be 1.0 or undefined, got {initial_opacity}"
+        )
 
         # Trigger DOM event and let applyPropertyChange local method handle it
         await page.evaluate("""() => {

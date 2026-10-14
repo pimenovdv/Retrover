@@ -12,6 +12,7 @@ from src.main import app
 
 os.environ["TESTING"] = "1"
 
+
 @pytest.fixture(scope="module")
 def test_server():
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -50,7 +51,7 @@ def test_add_triangle(test_server: int):
         # Click the add triangle button
         page.evaluate('document.getElementById("btn-triangle").click()')
 
-        time.sleep(1) # wait for enlivenObjects and render
+        time.sleep(1)  # wait for enlivenObjects and render
 
         # Check properties of the drawn path
         objects_count = page.evaluate("canvas.getObjects().length")
@@ -75,6 +76,10 @@ def test_add_triangle(test_server: int):
         assert triangle_props["top"] == 250
         assert triangle_props["width"] == 100
         assert triangle_props["height"] == 100
-        assert triangle_props["fill"].lower().replace(" ", "") in ["blue", "#0000ff", "rgb(0,0,255)"]
+        assert triangle_props["fill"].lower().replace(" ", "") in [
+            "blue",
+            "#0000ff",
+            "rgb(0,0,255)",
+        ]
 
         browser.close()

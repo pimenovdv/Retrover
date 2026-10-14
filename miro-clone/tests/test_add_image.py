@@ -89,9 +89,9 @@ async def test_add_image(test_server):
             }));
         }""")
 
-        assert (
-            len(img_objects) == 1
-        ), f"Expected 1 image object, found {len(img_objects)}"
+        assert len(img_objects) == 1, (
+            f"Expected 1 image object, found {len(img_objects)}"
+        )
         img = img_objects[0]
         assert img["is_background"] is False
         assert img["selectable"] is True

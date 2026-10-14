@@ -12,6 +12,7 @@ from src.main import app
 
 os.environ["TESTING"] = "1"
 
+
 @pytest.fixture(scope="module")
 def test_server():
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -50,7 +51,7 @@ def test_add_pentagon(test_server: int):
         # Click the add pentagon button
         page.evaluate('document.getElementById("btn-pentagon").click()')
 
-        time.sleep(1) # wait for enlivenObjects and render
+        time.sleep(1)  # wait for enlivenObjects and render
 
         # Check properties of the drawn object
         objects_count = page.evaluate("canvas.getObjects().length")
@@ -75,8 +76,12 @@ def test_add_pentagon(test_server: int):
             {"x": 100, "y": 38},
             {"x": 82, "y": 100},
             {"x": 18, "y": 100},
-            {"x": 0, "y": 38}
+            {"x": 0, "y": 38},
         ]
-        assert pentagon_props["fill"].lower().replace(" ", "") in ["orange", "#ffa500", "rgb(255,165,0)"]
+        assert pentagon_props["fill"].lower().replace(" ", "") in [
+            "orange",
+            "#ffa500",
+            "rgb(255,165,0)",
+        ]
 
         browser.close()

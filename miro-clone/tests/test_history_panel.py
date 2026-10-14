@@ -83,8 +83,8 @@ async def test_history_panel(test_server):
         assert count > 0, "History list is empty"
 
         first_item_text = await list_items.nth(0).text_content()
-        assert (
-            "Action: add" in first_item_text
-        ), f"Expected 'Action: add', got '{first_item_text}'"
+        assert "Action: add" in first_item_text, (
+            f"Expected 'Action: add', got '{first_item_text}'"
+        )
 
         await browser.close()

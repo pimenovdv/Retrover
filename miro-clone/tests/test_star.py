@@ -12,6 +12,7 @@ from src.main import app
 
 os.environ["TESTING"] = "1"
 
+
 @pytest.fixture(scope="module")
 def test_server():
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -50,7 +51,7 @@ def test_add_star(test_server: int):
         # Click the add star button
         page.evaluate('document.getElementById("btn-star").click()')
 
-        time.sleep(1) # wait for enlivenObjects and render
+        time.sleep(1)  # wait for enlivenObjects and render
 
         # Check properties of the drawn object
         objects_count = page.evaluate("canvas.getObjects().length")
@@ -80,8 +81,12 @@ def test_add_star(test_server: int):
             {"x": 21, "y": 91},
             {"x": 32, "y": 57},
             {"x": 2, "y": 35},
-            {"x": 39, "y": 35}
+            {"x": 39, "y": 35},
         ]
-        assert star_props["fill"].lower().replace(" ", "") in ["yellow", "#ffff00", "rgb(255,255,0)"]
+        assert star_props["fill"].lower().replace(" ", "") in [
+            "yellow",
+            "#ffff00",
+            "rgb(255,255,0)",
+        ]
 
         browser.close()
