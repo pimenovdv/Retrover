@@ -79,9 +79,12 @@ async def test_add_image(test_server):
         await file_chooser.set_files(dummy_img_path)
 
         # Wait for the image to be processed and added to canvas
-        await page.wait_for_function("""() => {
+        await page.wait_for_function(
+            """() => {
             return window.canvas.getObjects().filter(o => o.type === 'image' && !o.is_background).length === 1;
-        }""", timeout=10000)
+        }""",
+            timeout=10000,
+        )
 
         # Evaluate canvas state to check for the added image object
         img_objects = await page.evaluate("""() => {

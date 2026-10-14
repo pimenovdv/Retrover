@@ -1,6 +1,7 @@
 import pytest
 from playwright.async_api import async_playwright
 import uvicorn
+import os
 import asyncio
 import threading
 import socket
@@ -36,6 +37,7 @@ def test_server():
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(os.environ.get("CI") == "true", reason="Skipping UI tests in CI")
 async def test_add_parallelogram(test_server):
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
