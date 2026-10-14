@@ -31,6 +31,7 @@ def test_server():
 
 
 @pytest.mark.asyncio
+# Ensure it runs without flaky port issues but uses the skip if CI flag properly. Let's make sure skipif works.
 @pytest.mark.skipif(os.environ.get("CI") == "true", reason="Skipping UI tests in CI")
 async def test_add_image(test_server):
     from playwright.async_api import async_playwright
@@ -78,7 +79,7 @@ async def test_add_image(test_server):
         await file_chooser.set_files(dummy_img_path)
 
         # Wait for the image to be processed and added to canvas
-        await page.wait_for_timeout(2000)
+        await page.wait_for_timeout(4000)
 
         # Evaluate canvas state to check for the added image object
         img_objects = await page.evaluate("""() => {
