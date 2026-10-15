@@ -725,6 +725,28 @@ document.addEventListener("DOMContentLoaded", () => {
             updatePropertiesPanel();
         });
 
+        document.getElementById("btn-trapezoid").addEventListener("click", () => {
+            const id = uuidv4();
+            const vpt = canvas.viewportTransform;
+            const x = (canvas.width / 2 - vpt[4]) / vpt[0];
+            const y = (canvas.height / 2 - vpt[5]) / vpt[3];
+
+            const trapezoid = new fabric.Polygon([
+                {x: 25, y: 0},
+                {x: 125, y: 0},
+                {x: 150, y: 75},
+                {x: 0, y: 75}
+            ], {
+                left: x,
+                top: y,
+                fill: 'lightblue',
+                id: id
+            });
+            canvas.add(trapezoid);
+            canvas.setActiveObject(trapezoid);
+            updatePropertiesPanel();
+        });
+
         document.getElementById("btn-text").addEventListener("click", () => {
             const id = uuidv4();
             const text = new fabric.Textbox('Hello World', {

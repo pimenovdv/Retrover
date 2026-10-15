@@ -7,4 +7,4 @@
 
 ### Newly Planned Features
 - [x] Add Parallelogram Shape
-- [ ] Add Trapezoid Shape
+- [x] Add Trapezoid Shape
