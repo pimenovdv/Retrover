@@ -747,6 +747,30 @@ document.addEventListener("DOMContentLoaded", () => {
             updatePropertiesPanel();
         });
 
+        document.getElementById("btn-cross").addEventListener("click", () => {
+            const id = uuidv4();
+            const vpt = canvas.viewportTransform;
+            const x = (canvas.width / 2 - vpt[4]) / vpt[0];
+            const y = (canvas.height / 2 - vpt[5]) / vpt[3];
+
+            const cross = new fabric.Polygon([
+                {x: 33, y: 0}, {x: 66, y: 0},
+                {x: 66, y: 33}, {x: 100, y: 33},
+                {x: 100, y: 66}, {x: 66, y: 66},
+                {x: 66, y: 100}, {x: 33, y: 100},
+                {x: 33, y: 66}, {x: 0, y: 66},
+                {x: 0, y: 33}, {x: 33, y: 33}
+            ], {
+                left: x,
+                top: y,
+                fill: 'lightblue',
+                id: id
+            });
+            canvas.add(cross);
+            canvas.setActiveObject(cross);
+            updatePropertiesPanel();
+        });
+
         document.getElementById("btn-text").addEventListener("click", () => {
             const id = uuidv4();
             const text = new fabric.Textbox('Hello World', {
