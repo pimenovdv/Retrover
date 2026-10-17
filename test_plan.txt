@@ -1,0 +1,8 @@
+1. Update `miro-clone/TODO.md`: Compress the previously completed features into a shorter summary (e.g., combining shape-related features into "Basic and Advanced Shapes") and add `- [ ] Add Heart Shape` to the newly planned features.
+2. Update `miro-clone/static/index.html`: Add a new button `<button id="btn-heart">Add Heart</button>` in the shapes section.
+3. Update `miro-clone/static/app.js`: Add an event listener for `btn-heart`. It will use `uuidv4()`, calculate center coordinates using `canvas.viewportTransform`, and create a `fabric.Path` with a heart SVG path. Set its `id`, `fill`, add to `canvas`, call `canvas.setActiveObject()`, and invoke `updatePropertiesPanel()`.
+4. Create a test file `miro-clone/tests/test_heart.py`: This will contain a Playwright UI test `test_add_heart` analogous to `test_cross.py` that clicks `#btn-heart` and verifies that an object with `type === 'path'` is added to the canvas.
+5. Run the test suite using `cd miro-clone && UV_PROJECT_ENVIRONMENT=$(pwd)/.venv uv run pytest tests/test_heart.py`.
+6. Mark the task as completed in `miro-clone/TODO.md` by changing it to `- [x] Add Heart Shape`.
+7. Ensure proper testing, verification, review, and reflection are done (Pre-commit steps).
+8. Submit the code.
