@@ -771,6 +771,26 @@ document.addEventListener("DOMContentLoaded", () => {
             updatePropertiesPanel();
         });
 
+        document.getElementById("btn-speech-bubble").addEventListener("click", () => {
+            const id = uuidv4();
+            const vpt = canvas.viewportTransform;
+            const x = (canvas.width / 2 - vpt[4]) / vpt[0];
+            const y = (canvas.height / 2 - vpt[5]) / vpt[3];
+
+            const pathStr = 'M 50 0 C 22.4 0 0 17.9 0 40 C 0 54 8 66.4 20.3 73.4 L 15 90 L 32.7 80 C 38.1 82 43.9 83.3 50 83.3 C 77.6 83.3 100 65.4 100 43.3 C 100 21.2 77.6 0 50 0 Z';
+            const speechBubble = new fabric.Path(pathStr, {
+                left: x,
+                top: y,
+                fill: '#ffffff',
+                stroke: '#000000',
+                strokeWidth: 2,
+                id: id
+            });
+            canvas.add(speechBubble);
+            canvas.setActiveObject(speechBubble);
+            updatePropertiesPanel();
+        });
+
         document.getElementById("btn-heart").addEventListener("click", () => {
             const id = uuidv4();
             const vpt = canvas.viewportTransform;
