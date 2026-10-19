@@ -1,9 +1,9 @@
 # TODO for Miro Clone
 
 ## Completed Features
-- Core features, Basic/Advanced Shapes (including Heart).
+- Core features, Basic/Advanced Shapes (including Speech Bubble).
 
 ## To-Do
 
 ### Newly Planned Features
-- [x] Add Speech Bubble Shape
+- [x] Add Cloud Shape

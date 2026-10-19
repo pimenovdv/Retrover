@@ -791,6 +791,26 @@ document.addEventListener("DOMContentLoaded", () => {
             updatePropertiesPanel();
         });
 
+        document.getElementById("btn-cloud").addEventListener("click", () => {
+            const id = uuidv4();
+            const vpt = canvas.viewportTransform;
+            const x = (canvas.width / 2 - vpt[4]) / vpt[0];
+            const y = (canvas.height / 2 - vpt[5]) / vpt[3];
+
+            const pathStr = 'M 25 60 A 20 20 0 0 1 25 20 A 30 30 0 0 1 85 20 A 20 20 0 0 1 85 60 Z';
+            const cloud = new fabric.Path(pathStr, {
+                left: x,
+                top: y,
+                fill: '#ffffff',
+                stroke: '#000000',
+                strokeWidth: 2,
+                id: id
+            });
+            canvas.add(cloud);
+            canvas.setActiveObject(cloud);
+            updatePropertiesPanel();
+        });
+
         document.getElementById("btn-heart").addEventListener("click", () => {
             const id = uuidv4();
             const vpt = canvas.viewportTransform;
