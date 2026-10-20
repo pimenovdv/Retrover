@@ -811,6 +811,26 @@ document.addEventListener("DOMContentLoaded", () => {
             updatePropertiesPanel();
         });
 
+        document.getElementById("btn-moon").addEventListener("click", () => {
+            const id = uuidv4();
+            const vpt = canvas.viewportTransform;
+            const x = (canvas.width / 2 - vpt[4]) / vpt[0];
+            const y = (canvas.height / 2 - vpt[5]) / vpt[3];
+
+            const pathStr = 'M 40 10 A 40 40 0 1 0 90 60 A 50 50 0 0 1 40 10 Z';
+            const moon = new fabric.Path(pathStr, {
+                left: x,
+                top: y,
+                fill: '#ffffff',
+                stroke: '#000000',
+                strokeWidth: 2,
+                id: id
+            });
+            canvas.add(moon);
+            canvas.setActiveObject(moon);
+            updatePropertiesPanel();
+        });
+
         document.getElementById("btn-heart").addEventListener("click", () => {
             const id = uuidv4();
             const vpt = canvas.viewportTransform;
