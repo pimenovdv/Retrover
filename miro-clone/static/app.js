@@ -849,6 +849,28 @@ document.addEventListener("DOMContentLoaded", () => {
             updatePropertiesPanel();
         });
 
+        document.getElementById("btn-lightning").addEventListener("click", () => {
+            const id = uuidv4();
+            const vpt = canvas.viewportTransform;
+            const x = (canvas.width / 2 - vpt[4]) / vpt[0];
+            const y = (canvas.height / 2 - vpt[5]) / vpt[3];
+
+            const pathStr = 'M 50 0 L 10 60 L 40 60 L 30 120 L 90 40 L 50 40 Z';
+            const lightning = new fabric.Path(pathStr, {
+                left: x,
+                top: y,
+                fill: '#ffff00',
+                stroke: '#000000',
+                strokeWidth: 2,
+                id: id,
+                scaleX: 1,
+                scaleY: 1
+            });
+            canvas.add(lightning);
+            canvas.setActiveObject(lightning);
+            updatePropertiesPanel();
+        });
+
         document.getElementById("btn-text").addEventListener("click", () => {
             const id = uuidv4();
             const text = new fabric.Textbox('Hello World', {
