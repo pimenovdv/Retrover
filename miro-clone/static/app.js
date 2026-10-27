@@ -971,6 +971,26 @@ document.addEventListener("DOMContentLoaded", () => {
             updatePropertiesPanel();
         });
 
+        document.getElementById("btn-cylinder").addEventListener("click", () => {
+            const id = uuidv4();
+            const vpt = canvas.viewportTransform;
+            const x = (canvas.width / 2 - vpt[4]) / vpt[0];
+            const y = (canvas.height / 2 - vpt[5]) / vpt[3];
+
+            const pathStr = 'M 0 20 Q 50 0 100 20 L 100 80 Q 50 100 0 80 Z M 0 20 Q 50 40 100 20';
+            const cylinderShape = new fabric.Path(pathStr, {
+                left: x,
+                top: y,
+                fill: '#ffffff',
+                stroke: '#000000',
+                strokeWidth: 2,
+                id: id
+            });
+            canvas.add(cylinderShape);
+            canvas.setActiveObject(cylinderShape);
+            updatePropertiesPanel();
+        });
+
         document.getElementById("btn-text").addEventListener("click", () => {
             const id = uuidv4();
             const text = new fabric.Textbox('Hello World', {
