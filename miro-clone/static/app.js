@@ -1012,6 +1012,46 @@ document.addEventListener("DOMContentLoaded", () => {
             updatePropertiesPanel();
         });
 
+        document.getElementById("btn-cone").addEventListener("click", () => {
+            const id = uuidv4();
+            const vpt = canvas.viewportTransform;
+            const x = (canvas.width / 2 - vpt[4]) / vpt[0];
+            const y = (canvas.height / 2 - vpt[5]) / vpt[3];
+
+            const pathStr = 'M 50 0 L 100 80 Q 50 100 0 80 Z';
+            const coneShape = new fabric.Path(pathStr, {
+                left: x,
+                top: y,
+                fill: '#ffffff',
+                stroke: '#000000',
+                strokeWidth: 2,
+                id: id
+            });
+            canvas.add(coneShape);
+            canvas.setActiveObject(coneShape);
+            updatePropertiesPanel();
+        });
+
+        document.getElementById("btn-pyramid").addEventListener("click", () => {
+            const id = uuidv4();
+            const vpt = canvas.viewportTransform;
+            const x = (canvas.width / 2 - vpt[4]) / vpt[0];
+            const y = (canvas.height / 2 - vpt[5]) / vpt[3];
+
+            const pathStr = 'M 50 0 L 100 80 L 0 80 Z M 50 0 L 50 80';
+            const pyramidShape = new fabric.Path(pathStr, {
+                left: x,
+                top: y,
+                fill: '#ffffff',
+                stroke: '#000000',
+                strokeWidth: 2,
+                id: id
+            });
+            canvas.add(pyramidShape);
+            canvas.setActiveObject(pyramidShape);
+            updatePropertiesPanel();
+        });
+
         document.getElementById("btn-text").addEventListener("click", () => {
             const id = uuidv4();
             const text = new fabric.Textbox('Hello World', {
