@@ -7,5 +7,5 @@
 
 ### Newly Planned Features
 - [x] Add Cube Shape
-- [ ] Add Cone Shape
-- [ ] Add Pyramid Shape
+- [x] Add Cone Shape
+- [x] Add Pyramid Shape
