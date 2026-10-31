@@ -7,5 +7,5 @@
 
 ### Newly Planned Features
 - [x] Add Ring Shape
-- [ ] Add Teardrop Shape
+- [x] Add Teardrop Shape
 - [ ] Add Hexagram Shape

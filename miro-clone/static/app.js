@@ -1072,6 +1072,26 @@ document.addEventListener("DOMContentLoaded", () => {
             updatePropertiesPanel();
         });
 
+        document.getElementById("btn-teardrop").addEventListener("click", () => {
+            const id = uuidv4();
+            const vpt = canvas.viewportTransform;
+            const x = (canvas.width / 2 - vpt[4]) / vpt[0];
+            const y = (canvas.height / 2 - vpt[5]) / vpt[3];
+
+            const pathStr = 'M 50,0 C 75,25 100,50 100,75 A 50,50 0 1,1 0,75 C 0,50 25,25 50,0 Z';
+            const teardropShape = new fabric.Path(pathStr, {
+                left: x,
+                top: y,
+                fill: '#ffffff',
+                stroke: '#000000',
+                strokeWidth: 2,
+                id: id
+            });
+            canvas.add(teardropShape);
+            canvas.setActiveObject(teardropShape);
+            updatePropertiesPanel();
+        });
+
         document.getElementById("btn-text").addEventListener("click", () => {
             const id = uuidv4();
             const text = new fabric.Textbox('Hello World', {
