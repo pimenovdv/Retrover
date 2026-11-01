@@ -701,6 +701,36 @@ document.addEventListener("DOMContentLoaded", () => {
             updatePropertiesPanel();
         });
 
+        document.getElementById("btn-hexagram").addEventListener("click", () => {
+            const id = uuidv4();
+            const vpt = canvas.viewportTransform;
+            const x = (canvas.width / 2 - vpt[4]) / vpt[0];
+            const y = (canvas.height / 2 - vpt[5]) / vpt[3];
+
+            const hexagram = new fabric.Polygon([
+                {x: 50, y: 0},
+                {x: 65, y: 25},
+                {x: 100, y: 25},
+                {x: 82, y: 50},
+                {x: 100, y: 75},
+                {x: 65, y: 75},
+                {x: 50, y: 100},
+                {x: 35, y: 75},
+                {x: 0, y: 75},
+                {x: 18, y: 50},
+                {x: 0, y: 25},
+                {x: 35, y: 25}
+            ], {
+                left: x,
+                top: y,
+                fill: 'blue',
+                id: id
+            });
+            canvas.add(hexagram);
+            canvas.setActiveObject(hexagram);
+            updatePropertiesPanel();
+        });
+
         document.getElementById("btn-hexagon").addEventListener("click", () => {
             const id = uuidv4();
             const vpt = canvas.viewportTransform;

@@ -8,4 +8,4 @@
 ### Newly Planned Features
 - [x] Add Ring Shape
 - [x] Add Teardrop Shape
-- [ ] Add Hexagram Shape
+- [x] Add Hexagram Shape
