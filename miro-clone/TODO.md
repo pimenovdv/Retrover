@@ -7,4 +7,4 @@
 
 ### Newly Planned Features
 - [x] Add Ticket Shape
-- [ ] Add Ribbon Shape
+- [x] Add Ribbon Shape
