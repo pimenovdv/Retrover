@@ -1260,6 +1260,52 @@ document.addEventListener("DOMContentLoaded", () => {
             updatePropertiesPanel();
         });
 
+        document.getElementById("btn-gear").addEventListener("click", () => {
+            const id = uuidv4();
+            const vpt = canvas.viewportTransform;
+            const x = (canvas.width / 2 - vpt[4]) / vpt[0];
+            const y = (canvas.height / 2 - vpt[5]) / vpt[3];
+
+            const pathStr = 'M 42.5 5 L 57.5 5 L 59 18 A 30 30 0 0 1 70.5 22.5 L 81 12 L 91.5 22.5 L 81 33 A 30 30 0 0 1 85.5 44 L 98.5 45.5 L 98.5 54.5 L 85.5 56 A 30 30 0 0 1 81 67 L 91.5 77.5 L 81 88 L 70.5 77.5 A 30 30 0 0 1 59 82 L 57.5 95 L 42.5 95 L 41 82 A 30 30 0 0 1 29.5 77.5 L 19 88 L 8.5 77.5 L 19 67 A 30 30 0 0 1 14.5 56 L 1.5 54.5 L 1.5 45.5 L 14.5 44 A 30 30 0 0 1 19 33 L 8.5 22.5 L 19 12 L 29.5 22.5 A 30 30 0 0 1 41 18 Z M 50 35 A 15 15 0 1 0 50 65 A 15 15 0 1 0 50 35 Z';
+            const gear = new fabric.Path(pathStr, {
+                left: x,
+                top: y,
+                fill: '#ffffff',
+                stroke: '#000000',
+                strokeWidth: 2,
+                id: id,
+                originX: 'center',
+                originY: 'center',
+                objectCaching: false
+            });
+            canvas.add(gear);
+            canvas.setActiveObject(gear);
+            updatePropertiesPanel();
+        });
+
+        document.getElementById("btn-sun").addEventListener("click", () => {
+            const id = uuidv4();
+            const vpt = canvas.viewportTransform;
+            const x = (canvas.width / 2 - vpt[4]) / vpt[0];
+            const y = (canvas.height / 2 - vpt[5]) / vpt[3];
+
+            const pathStr = 'M 50 15 A 35 35 0 1 1 50 85 A 35 35 0 1 1 50 15 M 50 0 L 50 10 M 50 90 L 50 100 M 0 50 L 10 50 M 90 50 L 100 50 M 15 15 L 22 22 M 85 85 L 78 78 M 15 85 L 22 78 M 85 15 L 78 22';
+            const sun = new fabric.Path(pathStr, {
+                left: x,
+                top: y,
+                fill: '#ffffff',
+                stroke: '#000000',
+                strokeWidth: 2,
+                id: id,
+                originX: 'center',
+                originY: 'center',
+                objectCaching: false
+            });
+            canvas.add(sun);
+            canvas.setActiveObject(sun);
+            updatePropertiesPanel();
+        });
+
         document.getElementById("btn-text").addEventListener("click", () => {
             const id = uuidv4();
             const text = new fabric.Textbox('Hello World', {
