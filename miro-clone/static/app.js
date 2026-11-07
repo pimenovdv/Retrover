@@ -1306,6 +1306,26 @@ document.addEventListener("DOMContentLoaded", () => {
             updatePropertiesPanel();
         });
 
+        document.getElementById("btn-semicircle").addEventListener("click", () => {
+            const id = uuidv4();
+            const vpt = canvas.viewportTransform;
+            const x = (canvas.width / 2 - vpt[4]) / vpt[0];
+            const y = (canvas.height / 2 - vpt[5]) / vpt[3];
+
+            const pathStr = 'M 0 50 A 50 50 0 0 1 100 50 Z';
+            const semicircle = new fabric.Path(pathStr, {
+                left: x,
+                top: y,
+                fill: '#ffffff',
+                stroke: '#000000',
+                strokeWidth: 2,
+                id: id
+            });
+            canvas.add(semicircle);
+            canvas.setActiveObject(semicircle);
+            updatePropertiesPanel();
+        });
+
         document.getElementById("btn-text").addEventListener("click", () => {
             const id = uuidv4();
             const text = new fabric.Textbox('Hello World', {

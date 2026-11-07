@@ -1,11 +1,9 @@
 # TODO for Miro Clone
 
 ## Completed Features
-- Basic, Advanced, and 3D Shapes, along with Ring, Teardrop, Hexagram, Chevron, Shield, Ticket, and Ribbon Shapes.
-- Added Envelope and Battery Shapes.
+- Various Shapes including Basic, Advanced, 3D, Ring, Teardrop, Hexagram, Chevron, Shield, Ticket, Ribbon, Envelope, Battery, Gear, Sun.
 
 ## To-Do
 
 ### Newly Planned Features
-- [x] Add Gear Shape
-- [x] Add Sun Shape
+- [x] Add Semicircle Shape
