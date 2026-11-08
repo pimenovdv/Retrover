@@ -48,7 +48,11 @@ def test_minimap(server):
         username = f"user_{uuid.uuid4()}"
         page.fill("#nickname-input", username)
         page.fill("#password-input", "password123")
-        page.click("#register-btn")
+        page.click("#login-btn")
+        try:
+            page.wait_for_selector("#canvas-container", state="visible", timeout=3000)
+        except Exception:
+            page.click("#register-btn")
 
         # Wait for canvas to load
         page.wait_for_selector("#canvas-container", state="visible")

@@ -51,7 +51,11 @@ def test_templates_ui(test_server):
         page.fill("#board-id-input", "test_board_" + str(uuid.uuid4()))
         page.fill("#nickname-input", "test_user")
         page.fill("#password-input", "password")
-        page.click("#register-btn")
+        page.click("#login-btn")
+        try:
+            page.wait_for_selector("#canvas-container", state="visible", timeout=3000)
+        except Exception:
+            page.click("#register-btn")
 
         # Wait for canvas and toolbar to be visible
         page.wait_for_selector("#canvas-container", state="visible")

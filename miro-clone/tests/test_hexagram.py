@@ -44,7 +44,11 @@ def test_add_hexagram(test_server: int):
         page.fill("#board-id-input", board_id)
         page.fill("#nickname-input", username)
         page.fill("#password-input", password)
-        page.click("#register-btn")
+        page.click("#login-btn")
+        try:
+            page.wait_for_selector("#canvas-container", state="visible", timeout=3000)
+        except Exception:
+            page.click("#register-btn")
 
         page.wait_for_selector("#toolbar", state="visible")
 
@@ -83,7 +87,7 @@ def test_add_hexagram(test_server: int):
             {"x": 0, "y": 75},
             {"x": 18, "y": 50},
             {"x": 0, "y": 25},
-            {"x": 35, "y": 25}
+            {"x": 35, "y": 25},
         ]
         assert hexagram_props["fill"].lower().replace(" ", "") in [
             "blue",

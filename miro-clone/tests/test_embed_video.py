@@ -50,7 +50,11 @@ def test_embed_video(server):
         page.fill("#nickname-input", test_user)
         page.fill("#password-input", "testpass")
         page.fill("#board-id-input", f"board_{uuid.uuid4().hex[:8]}")
-        page.click("#register-btn")
+        page.click("#login-btn")
+        try:
+            page.wait_for_selector("#canvas-container", state="visible", timeout=3000)
+        except Exception:
+            page.click("#register-btn")
 
         page.wait_for_selector("#canvas-container", state="visible")
 

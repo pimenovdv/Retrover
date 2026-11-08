@@ -51,7 +51,13 @@ async def test_add_parallelogram(test_server):
 
         await page.fill("#nickname-input", "testuser")
         await page.fill("#password-input", "password123")
-        await page.click("#register-btn")
+        await page.click("#login-btn")
+        try:
+            await page.wait_for_selector(
+                "#canvas-container", state="visible", timeout=3000
+            )
+        except Exception:
+            await page.click("#register-btn")
 
         await page.wait_for_selector("#canvas-container", state="visible")
         await page.wait_for_function("window.canvas !== undefined")

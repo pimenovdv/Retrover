@@ -44,7 +44,11 @@ def test_freehand_brush_properties(test_server: int):
         page.fill("#board-id-input", board_id)
         page.fill("#nickname-input", username)
         page.fill("#password-input", password)
-        page.click("#register-btn")
+        page.click("#login-btn")
+        try:
+            page.wait_for_selector("#canvas-container", state="visible", timeout=3000)
+        except Exception:
+            page.click("#register-btn")
 
         page.wait_for_selector("#toolbar", state="visible")
 

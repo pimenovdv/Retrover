@@ -44,7 +44,11 @@ def test_dark_mode_toggle(server_url):
         page.fill("#board-id-input", "darkmode-test")
         page.fill("#nickname-input", username)
         page.fill("#password-input", "testpass")
-        page.click("#register-btn")
+        page.click("#login-btn")
+        try:
+            page.wait_for_selector("#canvas-container", state="visible", timeout=3000)
+        except Exception:
+            page.click("#register-btn")
 
         # Wait for toolbar
         page.wait_for_selector("#toolbar:not(.hidden)")

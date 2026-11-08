@@ -59,7 +59,11 @@ def test_alignment(test_server):
         page.wait_for_selector("#login-modal", state="visible")
         page.fill("#nickname-input", test_username)
         page.fill("#password-input", "password123")
-        page.click("#register-btn")
+        page.click("#login-btn")
+        try:
+            page.wait_for_selector("#canvas-container", state="visible", timeout=3000)
+        except Exception:
+            page.click("#register-btn")
         page.wait_for_selector("#login-modal", state="hidden")
 
         # Add a couple of rectangles

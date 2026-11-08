@@ -65,7 +65,11 @@ def test_smart_guides(setup_database_and_server):
         page.fill("#board-id-input", "guides-board")
         page.fill("#nickname-input", str(uuid.uuid4()))
         page.fill("#password-input", "testpass")
-        page.click("#register-btn")
+        page.click("#login-btn")
+        try:
+            page.wait_for_selector("#canvas-container", state="visible", timeout=3000)
+        except Exception:
+            page.click("#register-btn")
         page.wait_for_selector("#canvas-container", state="visible")
 
         # Turn on Smart Guides

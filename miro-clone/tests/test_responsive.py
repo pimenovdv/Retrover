@@ -70,7 +70,11 @@ def test_responsive_mobile_viewport(test_server):
         username = f"user_{uuid.uuid4()}"
         page.fill("#nickname-input", username)
         page.fill("#password-input", "password123")
-        page.click("#register-btn")
+        page.click("#login-btn")
+        try:
+            page.wait_for_selector("#canvas-container", state="visible", timeout=3000)
+        except Exception:
+            page.click("#register-btn")
 
         page.wait_for_selector("#canvas-container", state="visible")
         page.wait_for_timeout(500)

@@ -6,12 +6,14 @@ import threading
 from playwright.sync_api import sync_playwright
 import time
 
+
 def get_free_port():
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.bind(('', 0))
+    s.bind(("", 0))
     port = s.getsockname()[1]
     s.close()
     return port
+
 
 @pytest.fixture(scope="module")
 def server_url():
@@ -34,6 +36,7 @@ def server_url():
     server.should_exit = True
     thread.join()
 
+
 def test_add_semicircle(server_url):
     board_id = f"test_board_{uuid.uuid4().hex[:8]}"
 
@@ -47,16 +50,22 @@ def test_add_semicircle(server_url):
         page.fill("#board-id-input", board_id)
         page.fill("#nickname-input", "TestUser")
         page.fill("#password-input", "password123")
-        page.click("#login-btn") # Changing register to login
+        page.click("#login-btn")  # Changing register to login
 
         try:
             page.wait_for_selector("#btn-semicircle", state="visible", timeout=5000)
         except Exception:
             # Fallback to register if login failed
-            page.click("#register-btn")
+            page.click("#login-btn")
+            try:
+                page.wait_for_selector(
+                    "#canvas-container", state="visible", timeout=3000
+                )
+            except Exception:
+                page.click("#register-btn")
             page.wait_for_selector("#btn-semicircle", state="visible", timeout=5000)
 
-        page.evaluate('window.canvas !== undefined')
+        page.evaluate("window.canvas !== undefined")
 
         page.click("#btn-semicircle")
 
@@ -84,12 +93,12 @@ def test_add_semicircle(server_url):
         assert semicircle_props["fill"].lower().replace(" ", "") in [
             "#ffffff",
             "rgb(255,255,255)",
-            "white"
+            "white",
         ]
         assert semicircle_props["stroke"].lower().replace(" ", "") in [
             "#000000",
             "rgb(0,0,0)",
-            "black"
+            "black",
         ]
 
         browser.close()

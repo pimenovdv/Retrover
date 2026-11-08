@@ -48,7 +48,13 @@ async def test_laser_pointer():
             await page.fill("#board-id-input", "testboard")
             await page.fill("#nickname-input", username)
             await page.fill("#password-input", "pass123")
-            await page.click("#register-btn")
+            await page.click("#login-btn")
+            try:
+                await page.wait_for_selector(
+                    "#canvas-container", state="visible", timeout=3000
+                )
+            except Exception:
+                await page.click("#register-btn")
 
             # Wait for toolbar
             await page.wait_for_selector("#toolbar", state="visible")

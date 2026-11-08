@@ -53,7 +53,13 @@ async def test_select_all_btn(test_server):
         username = f"user_{uuid.uuid4()}"
         await page.fill("#nickname-input", username)
         await page.fill("#password-input", "password123")
-        await page.click("#register-btn")
+        await page.click("#login-btn")
+        try:
+            await page.wait_for_selector(
+                "#canvas-container", state="visible", timeout=3000
+            )
+        except Exception:
+            await page.click("#register-btn")
 
         await page.wait_for_selector("#canvas-container", state="visible")
         await page.wait_for_timeout(500)

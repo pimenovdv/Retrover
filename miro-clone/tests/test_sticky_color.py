@@ -47,7 +47,13 @@ async def test_sticky_color(test_server):
         await page.fill("#board-id-input", "sticky_color_board")
         await page.fill("#nickname-input", username)
         await page.fill("#password-input", "pass123")
-        await page.click("#register-btn")
+        await page.click("#login-btn")
+        try:
+            await page.wait_for_selector(
+                "#canvas-container", state="visible", timeout=3000
+            )
+        except Exception:
+            await page.click("#register-btn")
 
         await page.wait_for_selector("#canvas-container", state="visible")
 

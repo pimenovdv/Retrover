@@ -39,10 +39,15 @@ def test_export_import_json(test_server, tmp_path):
 
         # Login
         username = str(uuid.uuid4())
-        page.goto(f"http://127.0.0.1:{test_server}/")
+        board_id = f"test_board_{uuid.uuid4().hex[:8]}"
+        page.goto(f"http://127.0.0.1:{test_server}/?board={board_id}")
         page.fill("#nickname-input", username)
         page.fill("#password-input", "testpass")
-        page.click("#register-btn")
+        page.click("#login-btn")
+        try:
+            page.wait_for_selector("#canvas-container", state="visible", timeout=3000)
+        except Exception:
+            page.click("#register-btn")
 
         page.wait_for_selector("#canvas-container", state="visible")
 

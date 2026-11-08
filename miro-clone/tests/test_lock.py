@@ -40,7 +40,11 @@ def test_lock_unlock(test_server):
         page.goto(f"http://127.0.0.1:{test_server}/")
         page.fill("#nickname-input", username)
         page.fill("#password-input", "testpass")
-        page.click("#register-btn")
+        page.click("#login-btn")
+        try:
+            page.wait_for_selector("#canvas-container", state="visible", timeout=3000)
+        except Exception:
+            page.click("#register-btn")
 
         page.wait_for_selector("#canvas-container", state="visible")
 

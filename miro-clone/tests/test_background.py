@@ -48,7 +48,13 @@ async def test_background_image(test_server):
         username = f"user_{uuid.uuid4()}"
         await page.fill("#nickname-input", username)
         await page.fill("#password-input", "password123")
-        await page.click("#register-btn")
+        await page.click("#login-btn")
+        try:
+            await page.wait_for_selector(
+                "#canvas-container", state="visible", timeout=3000
+            )
+        except Exception:
+            await page.click("#register-btn")
 
         await page.wait_for_selector("#canvas-container", state="visible")
 

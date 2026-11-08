@@ -51,7 +51,13 @@ async def test_lasso_tool(test_server):
         await page.fill("#board-id-input", board_id)
         await page.fill("#nickname-input", username)
         await page.fill("#password-input", "testpass")
-        await page.click("#register-btn")
+        await page.click("#login-btn")
+        try:
+            await page.wait_for_selector(
+                "#canvas-container", state="visible", timeout=3000
+            )
+        except Exception:
+            await page.click("#register-btn")
 
         # Wait for canvas to be visible
         await page.wait_for_selector("#canvas-container", state="visible")

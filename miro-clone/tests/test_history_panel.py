@@ -56,7 +56,13 @@ async def test_history_panel(test_server):
         await page.fill("#board-id-input", board_id)
         await page.fill("#nickname-input", nickname)
         await page.fill("#password-input", "password123")
-        await page.click("#register-btn")
+        await page.click("#login-btn")
+        try:
+            await page.wait_for_selector(
+                "#canvas-container", state="visible", timeout=3000
+            )
+        except Exception:
+            await page.click("#register-btn")
 
         # Wait for toolbar to be visible
         await page.wait_for_selector("#toolbar:not(.hidden)", state="visible")

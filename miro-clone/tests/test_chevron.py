@@ -44,7 +44,11 @@ def test_add_chevron(test_server: int):
         page.fill("#board-id-input", board_id)
         page.fill("#nickname-input", username)
         page.fill("#password-input", password)
-        page.click("#register-btn")
+        page.click("#login-btn")
+        try:
+            page.wait_for_selector("#canvas-container", state="visible", timeout=3000)
+        except Exception:
+            page.click("#register-btn")
 
         page.wait_for_selector("#toolbar", state="visible")
 
@@ -74,13 +78,13 @@ def test_add_chevron(test_server: int):
             {"x": 100, "y": 50},
             {"x": 75, "y": 100},
             {"x": 0, "y": 100},
-            {"x": 25, "y": 50}
+            {"x": 25, "y": 50},
         ]
 
         assert chevron_props["fill"].lower().replace(" ", "") in [
             "#ffffff",
             "rgb(255,255,255)",
-            "white"
+            "white",
         ]
 
         browser.close()
