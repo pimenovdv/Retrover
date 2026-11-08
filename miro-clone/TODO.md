@@ -2,10 +2,10 @@
 
 ## Completed Features
 - Basic, Advanced, and 3D Shapes, along with Ring, Teardrop, Hexagram, Chevron, Shield, Ticket, and Ribbon Shapes.
-- Added Envelope and Battery Shapes.
+- Added Envelope, Battery, Gear, Sun, Camera, and Hourglass Shapes.
 
 ## To-Do
 
 ### Newly Planned Features
-- [x] Add Gear Shape
-- [x] Add Sun Shape
+- [x] Add Camera Shape
+- [x] Add Hourglass Shape
