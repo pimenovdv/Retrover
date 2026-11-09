@@ -38,7 +38,7 @@ def server_url():
     thread.join()
 
 
-@pytest.mark.skipif(os.environ.get('CI') == 'true', reason='Skipping UI tests in CI')
+@pytest.mark.skipif(os.environ.get("CI") == "true", reason="Skipping UI tests in CI")
 def test_add_semicircle(server_url):
     board_id = f"test_board_{uuid.uuid4().hex[:8]}"
 

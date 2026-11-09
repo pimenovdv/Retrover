@@ -1306,6 +1306,7 @@ document.addEventListener("DOMContentLoaded", () => {
             updatePropertiesPanel();
         });
 
+
         document.getElementById("btn-semicircle").addEventListener("click", () => {
             const id = uuidv4();
             const vpt = canvas.viewportTransform;
@@ -1323,6 +1324,52 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             canvas.add(semicircle);
             canvas.setActiveObject(semicircle);
+            updatePropertiesPanel();
+        });
+
+        document.getElementById("btn-camera").addEventListener("click", () => {
+            const id = uuidv4();
+            const vpt = canvas.viewportTransform;
+            const x = (canvas.width / 2 - vpt[4]) / vpt[0];
+            const y = (canvas.height / 2 - vpt[5]) / vpt[3];
+
+            const pathStr = 'M 10 30 L 30 30 L 40 10 L 60 10 L 70 30 L 90 30 C 95 30 100 35 100 40 L 100 80 C 100 85 95 90 90 90 L 10 90 C 5 90 0 85 0 80 L 0 40 C 0 35 5 30 10 30 Z M 50 40 A 20 20 0 1 0 50 80 A 20 20 0 1 0 50 40 Z M 80 40 A 5 5 0 1 0 80 50 A 5 5 0 1 0 80 40 Z';
+            const camera = new fabric.Path(pathStr, {
+                left: x,
+                top: y,
+                fill: '#ffffff',
+                stroke: '#000000',
+                strokeWidth: 2,
+                id: id,
+                originX: 'center',
+                originY: 'center',
+                objectCaching: false
+            });
+            canvas.add(camera);
+            canvas.setActiveObject(camera);
+            updatePropertiesPanel();
+        });
+
+        document.getElementById("btn-hourglass").addEventListener("click", () => {
+            const id = uuidv4();
+            const vpt = canvas.viewportTransform;
+            const x = (canvas.width / 2 - vpt[4]) / vpt[0];
+            const y = (canvas.height / 2 - vpt[5]) / vpt[3];
+
+            const pathStr = 'M 10 10 L 90 10 L 90 20 C 90 30 80 40 65 50 C 80 60 90 70 90 80 L 90 90 L 10 90 L 10 80 C 10 70 20 60 35 50 C 20 40 10 30 10 20 Z M 20 20 L 80 20 C 80 25 75 30 65 35 L 35 35 C 25 30 20 25 20 20 Z M 35 65 L 65 65 C 75 70 80 75 80 80 L 20 80 C 20 75 25 70 35 65 Z M 45 45 L 55 45 L 55 55 L 45 55 Z';
+            const hourglass = new fabric.Path(pathStr, {
+                left: x,
+                top: y,
+                fill: '#ffffff',
+                stroke: '#000000',
+                strokeWidth: 2,
+                id: id,
+                originX: 'center',
+                originY: 'center',
+                objectCaching: false
+            });
+            canvas.add(hourglass);
+            canvas.setActiveObject(hourglass);
             updatePropertiesPanel();
         });
 
