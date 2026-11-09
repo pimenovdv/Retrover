@@ -1352,6 +1352,29 @@ document.addEventListener("DOMContentLoaded", () => {
             updatePropertiesPanel();
         });
 
+        document.getElementById("btn-puzzle").addEventListener("click", () => {
+            const id = uuidv4();
+            const vpt = canvas.viewportTransform;
+            const x = (canvas.width / 2 - vpt[4]) / vpt[0];
+            const y = (canvas.height / 2 - vpt[5]) / vpt[3];
+
+            const pathStr = 'M 0 0 L 30 0 A 10 10 0 1 1 50 0 L 80 0 L 80 30 A 10 10 0 1 0 80 50 L 80 80 L 50 80 A 10 10 0 1 1 30 80 L 0 80 L 0 50 A 10 10 0 1 0 0 30 Z';
+            const puzzle = new fabric.Path(pathStr, {
+                left: x,
+                top: y,
+                fill: '#ffffff',
+                stroke: '#000000',
+                strokeWidth: 2,
+                id: id,
+                originX: 'center',
+                originY: 'center',
+                objectCaching: false
+            });
+            canvas.add(puzzle);
+            canvas.setActiveObject(puzzle);
+            updatePropertiesPanel();
+        });
+
         document.getElementById("btn-text").addEventListener("click", () => {
             const id = uuidv4();
             const text = new fabric.Textbox('Hello World', {
