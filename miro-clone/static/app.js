@@ -1375,6 +1375,24 @@ document.addEventListener("DOMContentLoaded", () => {
             updatePropertiesPanel();
         });
 
+        document.getElementById("btn-tree").addEventListener("click", () => {
+            const id = uuidv4();
+            const vpt = canvas.viewportTransform;
+            const x = (canvas.width / 2 - vpt[4]) / vpt[0];
+            const y = (canvas.height / 2 - vpt[5]) / vpt[3];
+
+            const pathStr = 'M 50 0 L 100 60 L 65 60 L 65 100 L 35 100 L 35 60 L 0 60 Z';
+            const tree = new fabric.Path(pathStr, {
+                left: x,
+                top: y,
+                id: id,
+                objectCaching: false
+            });
+            canvas.add(tree);
+            canvas.setActiveObject(tree);
+            updatePropertiesPanel();
+        });
+
         document.getElementById("btn-text").addEventListener("click", () => {
             const id = uuidv4();
             const text = new fabric.Textbox('Hello World', {
