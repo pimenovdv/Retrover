@@ -1393,6 +1393,24 @@ document.addEventListener("DOMContentLoaded", () => {
             updatePropertiesPanel();
         });
 
+        document.getElementById("btn-checkmark").addEventListener("click", () => {
+            const id = uuidv4();
+            const vpt = canvas.viewportTransform;
+            const x = (canvas.width / 2 - vpt[4]) / vpt[0];
+            const y = (canvas.height / 2 - vpt[5]) / vpt[3];
+
+            const pathStr = 'M 25 50 L 40 65 L 75 30 L 85 40 L 40 85 L 15 60 Z';
+            const checkmark = new fabric.Path(pathStr, {
+                left: x,
+                top: y,
+                id: id,
+                objectCaching: false
+            });
+            canvas.add(checkmark);
+            canvas.setActiveObject(checkmark);
+            updatePropertiesPanel();
+        });
+
         document.getElementById("btn-text").addEventListener("click", () => {
             const id = uuidv4();
             const text = new fabric.Textbox('Hello World', {

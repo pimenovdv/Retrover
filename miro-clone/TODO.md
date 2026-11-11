@@ -1,9 +1,9 @@
 # TODO for Miro Clone
 
 ## Completed Features
-- Added various primitive and complex shapes including Puzzle Piece.
+- Added various primitive and complex shapes including Puzzle Piece and Tree Shape.
 
 ## To-Do
 
 ### Newly Planned Features
-- [x] Add Tree Shape
+- [x] Add Checkmark Shape
